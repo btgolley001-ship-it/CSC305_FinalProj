@@ -1,0 +1,12 @@
+extends layout
+
+block content
+  h1= title
+  p Welcome to the HR page, where we know what's good for you.
+  h2 Next page
+
+  form(action="/", method="post")
+    input#HR_page(type="checkbox", name="HR_page")
+    label Go to the HR page
+    br
+    input(type="submit", value="Submit") 
