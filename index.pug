@@ -1,0 +1,16 @@
+doctype html
+html
+  head
+    title Role Selector
+  body
+    h1 Enter ID and choose role
+    form(action="/role" method="POST")
+      label(for="id") ID:
+      input(type="text" name="id" required)
+      br
+      label(for="role") Role:
+      select(name="role" required)
+        option(value="student") Student
+        option(value="teacher") Teacher
+      br
+      button(type="submit") Submit

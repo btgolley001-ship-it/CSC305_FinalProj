@@ -1,41 +1,26 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const express = require('express');
+const app = express();
+const port = 3000;
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-
-var app = express();
-
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
+app.use(express.urlencoded({ extended: true }));
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+app.get('/', (req, res) => {
+  res.render('index');
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+app.post('/role', (req, res) => {
+  const { id, role } = req.body;
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+  if (role === 'student') {
+    res.render('student', { id });
+  } else if (role === 'teacher') {
+    res.render('teacher', { id });
+  } else {
+    res.send('Invalid role');
+  }
 });
 
-module.exports = app;
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
