@@ -1,0 +1,27 @@
+{
+  "name": "csc305_finalproj",
+  "version": "0.0.0",
+  "description": "CSC 305 project",
+  "homepage": "https://github.com/btgolley001-ship-it/CSC305_FinalProj#readme",
+  "bugs": {
+    "url": "https://github.com/btgolley001-ship-it/CSC305_FinalProj/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/btgolley001-ship-it/CSC305_FinalProj.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "cookie-parser": "~1.4.4",
+    "debug": "~2.6.9",
+    "express": "^4.21.2",
+    "http-errors": "~1.6.3",
+    "morgan": "^1.10.1",
+    "pug": "^3.0.3"
+  }
+}
