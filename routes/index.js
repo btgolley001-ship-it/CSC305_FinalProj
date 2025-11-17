@@ -120,4 +120,20 @@ function renderPage(req, res, next, id, role) {
   });
 }
 
+app.get('/', (req, res) => {
+  res.render('index');
+});
+
+app.post('/role', (req, res) => {
+  const { id, role } = req.body;
+
+  if (role === 'student') {
+    res.render('student', { id });
+  } else if (role === 'teacher') {
+    res.render('teacher', { id });
+  } else {
+    res.send('Invalid role');
+  }
+});
+
 module.exports = router;
