@@ -5,3 +5,45 @@ html
   body
     h1 Student Page
     p Your ID: #{id}
+
+    // need to add to app.js
+    h2 Enrollment Records
+    if enrollment.length === 0
+      p No enrollment records
+    else
+      // table can be adjusted (cant see cause I cant download on my desktop)
+      table(border="1" cellpadding="6")
+        tr
+          th Course No
+          th Term
+          th Year
+          th Instructor
+          th Grade
+        each row in enrollment
+          tr
+            td= row.CourseNo
+            td= row.Term
+            td= row.Year
+            td= row.Instructor
+            td= row.Grade
+
+    // need to add to app.js
+    h2 Winter 2025 Offerings
+    if WinterOfferings.length === 0
+      p No offerings found
+    else
+      // table can be adjusted (cant see cause I cant download on my desktop)
+      table(border="1" cellpadding="6")
+        tr
+          th Course No
+          th Instructor
+          th Location
+          th Time
+          th Days
+        each row in WinterOfferings
+          tr
+            td= row.CourseNo
+            td= row.Instructor
+            td= row.Location
+            td= row.Time
+            td= row.Days
