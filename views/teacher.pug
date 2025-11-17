@@ -5,3 +5,46 @@ html
   body
     h1 Teacher Page
     p Your ID: #{id}
+
+block content 
+
+    //- What do I need to SELECT?
+    //- FacSSN = id
+    //- FacFirstName = facdetails.
+    //- FacLastName = facdetails.
+
+
+
+    //- Join: FacSSN <-> OfferNo
+    //- Offering Table
+    //- CourseNo, OffTerm, OffYear
+
+    p Your offerings:
+
+    /* List of offerings taught by that instructor
+     * Course number
+     * Term
+     * Year
+     */
+  
+     //- Displaying: [OFFERING TABLE] CourseNo, OffTerm, OffYear
+
+
+
+    //- Join: OfferNo
+    //- Enrollment Table
+    //- OfferNo, StdSSN, EnrGrade
+
+    //- Join: StdSSN
+    //- Student Table
+    //- StdSSN, StdFirstName, StdLastName
+
+    p Your students:
+
+    /* Students in that offering
+     * full name
+     * Student ID
+     * grade
+     */
+
+     //- Displaying: [STUDENT TABLE] StdSSN, StdFirstName, StdLastName [ENROLLMENT TABLE] EnrGrade
