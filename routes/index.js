@@ -286,7 +286,7 @@ function renderPage(req, res, next, id, role) {
   if (req.body.role === "student") {
     console.log('Rendering Student Page...\n')
     res.render('student', { id, // input value from index
-                            enrolled: req.app.locals.enrollment,
+                            enrollment: req.app.locals.enrollment,
                             formdata: req.body,
                             termslist: req.app.locals.termslist, // list of terms in Offering table, from listTerms()
                             faculty: req.app.locals.faculty, // entire Faculty table, from getFaculty()
