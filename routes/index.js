@@ -35,6 +35,109 @@ function listTerms(req, res, next, id, role) {
 }
 
 /*
+ * If there is a query to run to change the Faculty table, run it.
+ * In any case, run changeEnrollment next.
+ */
+function changeFaculty(req, res, next) {
+  console.log(`changeFaculty: ${req.body.action}`);
+  if (req.body.action && role === 'teacher') {
+    let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
+    fields = ['FacFirstName', 'FacLastName', 'FacCity', 'FacState',
+              'FacDept', 'FacRank', 'FacSalary', 'FacHireDate', 'FacZipCode'];
+    if (req.body.action == 'faculty_insert') {
+      sql = 'INSERT INTO FACULTY(FacSSN';
+      for (field of fields) {
+        sql += `,${field}`;
+      }
+      if (req.body.FacSupervisor) {
+        sql += ',FacSupervisor'
+      }
+      sql += `) VALUES ('${req.body.FacSSN}'`;
+      for (field of fields) {
+        sql += `,'${req.body[field]}'`;
+      }
+      if (req.body.FacSupervisor) {
+        sql += `,'${req.body.FacSupervisor}'`;
+      }
+      sql += ');';
+    }
+    else if (req.body.action.startsWith('faculty_update_')) {
+      if (req.body.FacDelete) {
+        sql = `DELETE FROM Faculty WHERE FacSSN='${req.body.FacSSN}';`;
+      }
+      else {
+        sql = `Update Faculty SET FacCity = '${req.body.FacCity}'`;
+        update_fields = fields.slice(3,7).concat(['FacSupervisor','FacZipCode']);
+        for (field of update_fields) {
+          sql += `,${field} = '${req.body[field]}'`;
+        }
+        sql += ` WHERE FacSSN='${req.body.FacSSN}';`;
+      }
+    }
+    console.log(sql);
+
+    // Callback function defined in the old style so that this.changes gets the
+    //     number of rows affected.
+    function sqlCallback(err) {
+      if (err) {
+        throw err;
+      }
+      console.log(`${this.changes} rows affected.`)
+      changeEnrollment(req, res, next);
+    }
+
+    req.app.locals.db.run(sql, [], sqlCallback);
+  }
+  else {
+    changeEnrollment(req, res, next);
+  }
+}
+
+/*
+ * If there is a query to run to change the Enrollment table (from student.pug), run it.
+ * In any case, run getFaculty next.
+ */
+function changeEnrollment(req, res, next) {
+  console.log(`changeEnrollment: ${req.body.action}`);
+  if (req.body.action && role === 'student') {
+    let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
+    fields = ['OfferNo', 'EnrGrade'];
+    if (req.body.action == 'course_add') {
+      sql = 'INSERT INTO Enrollment(StdSSN,';
+      for (field of fields) {
+        sql += `,${field}`;
+      }
+      sql += `) VALUES ('${req.body.FacSSN}'`;
+      for (field of fields) {
+        sql += `,'${req.body[field]}'`;
+      }
+      sql += ');';
+    }
+    else if (req.body.action == 'course_drop') {
+      sql = `DELETE FROM Enrollment WHERE StdSSN='${req.body.StdSSN}' and OfferNo=`;
+      sql += `,'${req.body['OfferNo']}'`;
+      sql += ';';
+    }
+    console.log(sql);
+
+    // Callback function defined in the old style so that this.changes gets the
+    //     number of rows affected.
+    function sqlCallback(err) {
+      if (err) {
+        throw err;
+      }
+      console.log(`${this.changes} rows affected.`)
+      getFaculty(req, res, next);
+    }
+
+    req.app.locals.db.run(sql, [], sqlCallback);
+  }
+  else {
+    getFaculty(req, res, next);
+  }
+}
+
+/*
  * If req.body.term_year is set, set req.locals.termcourses to a list of the
  * courses offered in that term and year.  Call listFaculty next.
  */
