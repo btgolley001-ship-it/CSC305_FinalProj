@@ -30,7 +30,7 @@ function listTerms(req, res, next, id, role) {
         throw err;
       }
       req.app.locals.termslist = rows;
-      listTermCourses(req, res, next, id, role);
+      changeFaculty(req, res, next, id, role);
   })
 }
 
@@ -135,6 +135,47 @@ function changeEnrollment(req, res, next) {
   else {
     getFaculty(req, res, next);
   }
+}
+
+/**
+ * Unconditionally set req.app.locals.faculty to be a list of the
+ * entire Faculty table.  Call listTerms next.
+ */
+function getFaculty(req, res, next) {
+  let sql = 'SELECT * from Faculty order by FacLastName, FacFirstName, FacSSN;'
+  req.app.locals.db.all(sql, [], (err, rows) => {
+    if (err) {
+      throw err;
+    }
+    req.app.locals.faculty = rows;
+    getStudent(req, res, next);
+  })
+}
+
+/**
+ * Unconditionally set req.app.locals.faculty to be a list of the
+ * entire Faculty table.  Call listTerms next.
+ */
+function getStudent(req, res, next) {
+  let sql = 'SELECT * from Student order by StdLastName, StdFirstName, StdSSN;'
+  req.app.locals.db.all(sql, [], (err, rows) => {
+    if (err) {
+      throw err;
+    }
+    req.app.locals.student = rows;
+    listTerms(req, res, next);
+  })
+}
+
+function listTerms(req, res, next, id, role) {
+  let sql = 'SELECT distinct OffTerm, OffYear from Offering order by OffYear;'
+  req.app.locals.db.all(sql, [], (err, rows) => {
+      if (err) {
+        throw err;
+      }
+      req.app.locals.termslist = rows;
+      listTermCourses(req, res, next, id, role);
+  })
 }
 
 /*
