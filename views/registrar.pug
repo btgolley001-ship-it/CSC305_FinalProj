@@ -5,7 +5,7 @@ html
   body
     h1 Registrar Page 
     p Your ID: #{id}
-    h2 Offerings schecduled for #{term} #{year}
+    h2 Winter Offerings
     if offerings.length
       table
         thead
@@ -42,7 +42,7 @@ html
                     button(type="submit" onclick="return confirm('cancel offering?')") Cancel
     else
       p No offering schecduled for next term.
-    h2 Add new offering for #{term} #{year}
+    h2 Add new Winter Offering
     form(action=`/registrar/${id}/add_offering` method="post")
       label Course:
       select(name="course_no")
