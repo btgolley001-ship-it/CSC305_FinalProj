@@ -78,7 +78,7 @@ function listFaculty(req, res, next, id, role) {
 }
 
 /*
- * Set req.app.locals.facDetails to all the details about a given faculty member.  Call renderPage.
+ * Set req.app.locals.facDetails to all the details about a given faculty member.  Call listStudent.
  */
 function inquireFaculty(req, res, next, id, role) {
   if (req.body.FacSSN) {
@@ -94,6 +94,43 @@ function inquireFaculty(req, res, next, id, role) {
   }
   else {
     req.app.locals.facDetails = undefined;
+    listStudent(req, res, next, id, role);
+  }
+}
+
+/*
+ * Unconditionally set req.app.locals.stdpeople to the StdSSN, StdFirstName, and
+ * StdLastName of everyone in the Student table.  Call inquireStudent.
+ */
+function listStudent(req, res, next, id, role) {  
+  let sql = 'SELECT StdSSN, StdFirstName, StdLastName from Student;'
+  req.app.locals.db.all(sql, [], (err, rows) => {
+    if (err) {
+      throw err;
+    }
+    req.app.locals.stdpeople = rows;
+    req.app.locals.title = 
+    inquireStudent(req, res, next, id, role);
+  })
+}
+
+/*
+ * Set req.app.locals.stdDetails to all the details about a given faculty member.  Call renderPage.
+ */
+function inquireStudent(req, res, next, id, role) {
+  if (req.body.StdSSN) {
+    sql = 'select StdSSN, StdFirstName, StdLastName, StdCity, StdState, StdMajor, StdClass, StdGPA, StdZip';
+    sql += ' from Student where StdSSN=?;';
+    req.app.locals.db.get(sql, [req.body.FacSSN], (err, row) => {
+      if (err) {
+        throw err;
+      }
+      req.app.locals.stdDetails = row;
+      renderPage(req, res, next, id, role);
+    });
+  }
+  else {
+    req.app.locals.stdDetails = undefined;
     renderPage(req, res, next, id, role);
   }
 }
@@ -114,26 +151,31 @@ function renderPage(req, res, next, id, role) {
   }
   res.render('index', { title: req.app.locals.title,
                         formdata: req.body,
+                        termscourses: req.locals.termcourses,
                         termslist: req.app.locals.termslist,
                         facpeople: req.app.locals.facpeople,
-                        facdetails: req.app.locals.facDetails                        
+                        facdetails: req.app.locals.facDetails,
+                        faculty: req.app.locals.faculty,
+                        stdpeople: req.app.locals.facpeople,
+                        stddetails: req.app.locals.facDetails,
+                        student: req.app.locals.student                        
   });
 }
 
-app.get('/', (req, res) => {
-  res.render('index');
-});
+// app.get('/', (req, res) => {
+//   res.render('index');
+// });
 
-app.post('/role', (req, res) => {
-  const { id, role } = req.body;
+// app.post('/role', (req, res) => {
+//   const { id, role } = req.body;
 
-  if (role === 'student') {
-    res.render('student', { id });
-  } else if (role === 'teacher') {
-    res.render('teacher', { id });
-  } else {
-    res.send('Invalid role');
-  }
-});
+//   if (role === 'student') {
+//     res.render('student', { id });
+//   } else if (role === 'teacher') {
+//     res.render('teacher', { id });
+//   } else {
+//     res.send('Invalid role');
+//   }
+// });
 
 module.exports = router;
