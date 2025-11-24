@@ -174,8 +174,16 @@ function getStudent(req, res, next, id, role) {
       throw err;
     }
     req.app.locals.student = rows;
-    listTermCourses(req, res, next, id, role);
+getEnrollment(req, res, next, id, role);
   })
+}
+function getEnrollment(req, res, next, id, role) {
+  let sql = 'SELECT * from Enrollment order by StdSSN, OfferNo;';
+  req.app.locals.db.all(sql, [], (err, rows) => {
+    if (err) throw err;
+    req.app.locals.enrollment = rows;
+    listTermCourses(req, res, next, id, role);
+  });
 }
 
 /*
