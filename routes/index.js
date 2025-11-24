@@ -5,7 +5,7 @@ var router = express.Router();
 router.get('/', function(req, res, next) {
   console.log('req.query (GET): '+JSON.stringify(req.query));
   req.body = req.query; // Now behaves very much like POST
-  res.render('index', {title: '305',
+  res.render('index', {title: 'Role Selector',
                        formdata: req.body});
 });
 
@@ -13,7 +13,18 @@ router.get('/', function(req, res, next) {
 router.post('/role', function(req, res, next) {
   console.log('req.body (POST): '+JSON.stringify(req.body));
   
-  var { id, role } = req.body;
+  var { id, role } = req.body; 
+
+  console.log('req.body.id: '+JSON.stringify(req.body.id)
+              +'\n\nid: '+JSON.stringify(id)
+              +'\n\nreq.body.role: '+JSON.stringify(req.body.role)
+              +'\n\nrole: '+JSON.stringify(role)
+              )
+  /* req.body.role isn't saving to role. i don't know why.
+   * seems like it's being recorded fine here. but when it gets to renderpage(), role is made empty.
+   * duct-tape solution: replace "role" w/ "req.body.role" when running renderpage()
+   * NEED TO FIX THIS ASAP
+   */
 
   listTerms(req, res, next, id, role);
 });
@@ -21,7 +32,7 @@ router.post('/role', function(req, res, next) {
 
 /*
  * Unconditionally set req.app.locals.termslist to be a list of the terms 
- * represented in the Offerings table, and call listTermCourses.
+ * represented in the Offerings table, and call changeFaculty.
  */
 function listTerms(req, res, next, id, role) {
   let sql = 'SELECT distinct OffTerm, OffYear from Offering order by OffYear;'
@@ -38,7 +49,7 @@ function listTerms(req, res, next, id, role) {
  * If there is a query to run to change the Faculty table, run it.
  * In any case, run changeEnrollment next.
  */
-function changeFaculty(req, res, next) {
+function changeFaculty(req, res, next, id, role) {
   console.log(`changeFaculty: ${req.body.action}`);
   if (req.body.action && role === 'teacher') {
     let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
@@ -83,13 +94,13 @@ function changeFaculty(req, res, next) {
         throw err;
       }
       console.log(`${this.changes} rows affected.`)
-      changeEnrollment(req, res, next);
+      changeEnrollment(req, res, next, id, role);
     }
 
     req.app.locals.db.run(sql, [], sqlCallback);
   }
   else {
-    changeEnrollment(req, res, next);
+    changeEnrollment(req, res, next, id, role);
   }
 }
 
@@ -97,7 +108,7 @@ function changeFaculty(req, res, next) {
  * If there is a query to run to change the Enrollment table (from student.pug), run it.
  * In any case, run getFaculty next.
  */
-function changeEnrollment(req, res, next) {
+function changeEnrollment(req, res, next, id, role) {
   console.log(`changeEnrollment: ${req.body.action}`);
   if (req.body.action && role === 'student') {
     let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
@@ -127,54 +138,43 @@ function changeEnrollment(req, res, next) {
         throw err;
       }
       console.log(`${this.changes} rows affected.`)
-      getFaculty(req, res, next);
+      getFaculty(req, res, next, id, role);
     }
 
     req.app.locals.db.run(sql, [], sqlCallback);
   }
   else {
-    getFaculty(req, res, next);
+    getFaculty(req, res, next, id, role);
   }
 }
 
 /**
  * Unconditionally set req.app.locals.faculty to be a list of the
- * entire Faculty table.  Call listTerms next.
+ * entire Faculty table.  Call getStudent next.
  */
-function getFaculty(req, res, next) {
+function getFaculty(req, res, next, id, role) {
   let sql = 'SELECT * from Faculty order by FacLastName, FacFirstName, FacSSN;'
   req.app.locals.db.all(sql, [], (err, rows) => {
     if (err) {
       throw err;
     }
     req.app.locals.faculty = rows;
-    getStudent(req, res, next);
+    getStudent(req, res, next, id, role);
   })
 }
 
 /**
- * Unconditionally set req.app.locals.faculty to be a list of the
- * entire Faculty table.  Call listTerms next.
+ * Unconditionally set req.app.locals.students to be a list of the
+ * entire Student table.  Call listTerms next.
  */
-function getStudent(req, res, next) {
+function getStudent(req, res, next, id, role) {
   let sql = 'SELECT * from Student order by StdLastName, StdFirstName, StdSSN;'
   req.app.locals.db.all(sql, [], (err, rows) => {
     if (err) {
       throw err;
     }
     req.app.locals.student = rows;
-    listTerms(req, res, next);
-  })
-}
-
-function listTerms(req, res, next, id, role) {
-  let sql = 'SELECT distinct OffTerm, OffYear from Offering order by OffYear;'
-  req.app.locals.db.all(sql, [], (err, rows) => {
-      if (err) {
-        throw err;
-      }
-      req.app.locals.termslist = rows;
-      listTermCourses(req, res, next, id, role);
+    listTermCourses(req, res, next, id, role);
   })
 }
 
@@ -216,7 +216,6 @@ function listFaculty(req, res, next, id, role) {
       throw err;
     }
     req.app.locals.facpeople = rows;
-    req.app.locals.title = 
     inquireFaculty(req, res, next, id, role);
   })
 }
@@ -233,7 +232,7 @@ function inquireFaculty(req, res, next, id, role) {
         throw err;
       }
       req.app.locals.facDetails = row;
-      renderPage(req, res, next, id, role);
+      listStudent(req, res, next, id, role);
     });
   }
   else {
@@ -253,7 +252,6 @@ function listStudent(req, res, next, id, role) {
       throw err;
     }
     req.app.locals.stdpeople = rows;
-    req.app.locals.title = 
     inquireStudent(req, res, next, id, role);
   })
 }
@@ -284,26 +282,52 @@ function inquireStudent(req, res, next, id, role) {
  * depending on what role was selected in index.
  */
 function renderPage(req, res, next, id, role) {
-  if (role === 'student') {
-    res.render('student', { id });
-  } else if (role === 'teacher') {
-    res.render('teacher', { id });
-  } else if (role === 'registrar') {
-    res.render('registrar', { id });
+  console.log('\nrenderPage() called. role: '+JSON.stringify(req.query))
+  if (req.body.role === "student") {
+    console.log('Rendering Student Page...\n')
+    res.render('student', { id, // input value from index
+                            formdata: req.body,
+                            termslist: req.app.locals.termslist, // list of terms in Offering table, from listTerms()
+                            faculty: req.app.locals.faculty, // entire Faculty table, from getFaculty()
+                            student: req.app.locals.student, // entire Student table, from getStudent ()
+                            termslist: req.app.locals.termslist,  // list of terms represented in the Offering table, from listTerms()
+                            termcourses: req.app.locals.termcourses, // list of courses offered in req.body.term_year, from listTermCourses()
+                            facpeople: req.app.locals.facpeople, // list of SSN, first and last names of the Faculty table, from listFaculty()
+                            facDetails: req.app.locals.facDetails, // from inquireFaculty
+                            stdpeople: req.app.locals.stdpeople, // list of SSN, first and last names of the Student table, from listStudent()
+                            stdDetails: req.app.locals.stdDetails // from inquireStudent()
+     });
+  } else if (req.body.role === "teacher") {
+    console.log('Rendering Teacher Page...\n')
+    res.render('teacher', { id, // input value from index
+                            formdata: req.body,
+                            termslist: req.app.locals.termslist, // list of terms in Offering table, from listTerms()
+                            faculty: req.app.locals.faculty, // entire Faculty table, from getFaculty()
+                            student: req.app.locals.student, // entire Student table, from getStudent ()
+                            termslist: req.app.locals.termslist,  // list of terms represented in the Offering table, from listTerms()
+                            termcourses: req.app.locals.termcourses, // list of courses offered in req.body.term_year, from listTermCourses()
+                            facpeople: req.app.locals.facpeople, // list of SSN, first and last names of the Faculty table, from listFaculty()
+                            facDetails: req.app.locals.facDetails, // from inquireFaculty
+                            stdpeople: req.app.locals.stdpeople, // list of SSN, first and last names of the Student table, from listStudent()
+                            stdDetails: req.app.locals.stdDetails // from inquireStudent()
+     });
+  } else if (req.body.role === "registrar") {
+    console.log('Rendering Registrar Page...\n')
+    res.render('registrar', { id, // input value from index
+                              formdata: req.body,
+                              termslist: req.app.locals.termslist, // list of terms in Offering table, from listTerms()
+                              faculty: req.app.locals.faculty, // entire Faculty table, from getFaculty()
+                              student: req.app.locals.student, // entire Student table, from getStudent ()
+                              termslist: req.app.locals.termslist,  // list of terms represented in the Offering table, from listTerms()
+                              termcourses: req.app.locals.termcourses, // list of courses offered in req.body.term_year, from listTermCourses()
+                              facpeople: req.app.locals.facpeople, // list of SSN, first and last names of the Faculty table, from listFaculty()
+                              facDetails: req.app.locals.facDetails, // from inquireFaculty
+                              stdpeople: req.app.locals.stdpeople, // list of SSN, first and last names of the Student table, from listStudent()
+                              stdDetails: req.app.locals.stdDetails // from inquireStudent()
+     });
   } else {
     res.send('Invalid role');
   }
-  res.render('index', { title: req.app.locals.title,
-                        formdata: req.body,
-                        termscourses: req.locals.termcourses,
-                        termslist: req.app.locals.termslist,
-                        facpeople: req.app.locals.facpeople,
-                        facdetails: req.app.locals.facDetails,
-                        faculty: req.app.locals.faculty,
-                        stdpeople: req.app.locals.facpeople,
-                        stddetails: req.app.locals.facDetails,
-                        student: req.app.locals.student                        
-  });
 }
 
 // app.get('/', (req, res) => {
