@@ -23,96 +23,26 @@ router.post('/role', function(req, res, next) {
   /* req.body.role isn't saving to role. i don't know why.
    * seems like it's being recorded fine here. but when it gets to renderpage(), role is made empty.
    * duct-tape solution: replace "role" w/ "req.body.role" when running renderpage()
-   * NEED TO FIX THIS ASAP
    */
 
-  listTerms(req, res, next, id, role);
+  changeEnrollment(req, res, next, id, role);
 });
 
-
 /*
- * Unconditionally set req.app.locals.termslist to be a list of the terms 
- * represented in the Offerings table, and call changeFaculty.
+ * If there is a query to run to change the Enrollment table, run it.
+ * In any case, run listWinterOfferings next.
  */
-function listTerms(req, res, next, id, role) {
-  let sql = 'SELECT distinct OffTerm, OffYear from Offering order by OffYear;'
-  req.app.locals.db.all(sql, [], (err, rows) => {
-      if (err) {
-        throw err;
-      }
-      req.app.locals.termslist = rows;
-      changeFaculty(req, res, next, id, role);
-  })
-}
-
-/*
- * If there is a query to run to change the Faculty table, run it.
- * In any case, run changeEnrollment next.
- */
-function changeFaculty(req, res, next, id, role) {
-  console.log(`changeFaculty: ${req.body.action}`);
-  if (req.body.action && role === 'teacher') {
-    let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
-    fields = ['FacFirstName', 'FacLastName', 'FacCity', 'FacState',
-              'FacDept', 'FacRank', 'FacSalary', 'FacHireDate', 'FacZipCode'];
-    if (req.body.action == 'faculty_insert') {
-      sql = 'INSERT INTO FACULTY(FacSSN';
-      for (field of fields) {
-        sql += `,${field}`;
-      }
-      if (req.body.FacSupervisor) {
-        sql += ',FacSupervisor'
-      }
-      sql += `) VALUES ('${req.body.FacSSN}'`;
-      for (field of fields) {
-        sql += `,'${req.body[field]}'`;
-      }
-      if (req.body.FacSupervisor) {
-        sql += `,'${req.body.FacSupervisor}'`;
-      }
-      sql += ');';
-    }
-    else if (req.body.action.startsWith('faculty_update_')) {
-      if (req.body.FacDelete) {
-        sql = `DELETE FROM Faculty WHERE FacSSN='${req.body.FacSSN}';`;
-      }
-      else {
-        sql = `Update Faculty SET FacCity = '${req.body.FacCity}'`;
-        update_fields = fields.slice(3,7).concat(['FacSupervisor','FacZipCode']);
-        for (field of update_fields) {
-          sql += `,${field} = '${req.body[field]}'`;
-        }
-        sql += ` WHERE FacSSN='${req.body.FacSSN}';`;
-      }
-    }
-    console.log(sql);
-
-    // Callback function defined in the old style so that this.changes gets the
-    //     number of rows affected.
-    function sqlCallback(err) {
-      if (err) {
-        throw err;
-      }
-      console.log(`${this.changes} rows affected.`)
-      changeEnrollment(req, res, next, id, role);
-    }
-
-    req.app.locals.db.run(sql, [], sqlCallback);
-  }
-  else {
-    changeEnrollment(req, res, next, id, role);
-  }
-}
-
-/*
- * If there is a query to run to change the Enrollment table (from student.pug), run it.
- * In any case, run getFaculty next.
- */
-function changeEnrollment(req, res, next, id, role) {
+function changeEnrollment(req, res, next, id, role) { // REMINDER: need to fix up this code!
   console.log(`changeEnrollment: ${req.body.action}`);
-  if (req.body.action && role === 'student') {
+
+  // student.pug changes
+
+  if (req.body.action && req.body.role === 'student') {
     let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
     fields = ['OfferNo', 'EnrGrade'];
+    
+    // course_add
+
     if (req.body.action == 'course_add') {
       sql = 'INSERT INTO Enrollment(StdSSN,';
       for (field of fields) {
@@ -123,13 +53,19 @@ function changeEnrollment(req, res, next, id, role) {
         sql += `,'${req.body[field]}'`;
       }
       sql += ');';
+      // INSERT INTO Enrollment(StdSSN, OfferNo, EnrGrade) VALUES({id}, {OfferNo}, {EnrGrade});
     }
+    
+    // course_drop
+    
     else if (req.body.action == 'course_drop') {
-      sql = `DELETE FROM Enrollment WHERE StdSSN='${req.body.StdSSN}' and OfferNo=`;
+      sql = `DELETE * FROM Enrollment WHERE StdSSN='${req.body.StdSSN}' and OfferNo=`;
       sql += `,'${req.body['OfferNo']}'`;
       sql += ';';
+      // DELETE * FROM Enrollment WHERE StdSSN = '{StdSNN}' and OfferNo = '{OfferNo}'
     }
-    console.log(sql);
+
+    console.log("\nchangeEnrollment, if role = 'student', sql: "+sql+"\n");
 
     // Callback function defined in the old style so that this.changes gets the
     //     number of rows affected.
@@ -138,151 +74,269 @@ function changeEnrollment(req, res, next, id, role) {
         throw err;
       }
       console.log(`${this.changes} rows affected.`)
-      getFaculty(req, res, next, id, role);
+      listWinterOfferings(req, res, next, id, role);
     }
 
     req.app.locals.db.run(sql, [], sqlCallback);
   }
+
+  // teacher.pug changes
+
+  else if (req.body.action && req.body.role === 'teacher') {
+    let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
+    console.log(sql);
+
+    // student_grade
+
+    if (req.body.action == 'course_drop') {
+      sql = `Update Enrollment SET EnrGrade = '${req.body.EnrGrade}'`;
+      update_fields = fields.slice(3,7).concat(['FacSupervisor','FacZipCode']);
+      for (field of update_fields) {
+        sql += `,${field} = '${req.body[field]}'`;
+      }
+      sql += ` WHERE StdSSN = '${req.body.StdSSN}';`;
+      sql += ` and OfferNo = '${req.body.OfferNo}';`;
+      // Update Enrollment SET EnrGrade = {EnrGrade} WHERE StdSSN = {StdSSN} and OfferNo = {OfferNo};
+    }
+
+    ("\nchangeEnrollment, if role = 'teacher', sql: "+sql+"\n");
+
+    // Callback function defined in the old style so that this.changes gets the
+    //     number of rows affected.
+    function sqlCallback(err) {
+      if (err) {
+        throw err;
+      }
+      console.log(`${this.changes} rows affected.`)
+      listWinterOfferings(req, res, next, id, role);
+    }
+
+    req.app.locals.db.run(sql, [], sqlCallback);
+  }
+
   else {
-    getFaculty(req, res, next, id, role);
-  }
-}
-
-/**
- * Unconditionally set req.app.locals.faculty to be a list of the
- * entire Faculty table.  Call getStudent next.
- */
-function getFaculty(req, res, next, id, role) {
-  let sql = 'SELECT * from Faculty order by FacLastName, FacFirstName, FacSSN;'
-  req.app.locals.db.all(sql, [], (err, rows) => {
-    if (err) {
-      throw err;
-    }
-    req.app.locals.faculty = rows;
-    getStudent(req, res, next, id, role);
-  })
-}
-
-/**
- * Unconditionally set req.app.locals.students to be a list of the
- * entire Student table.  Call listTerms next.
- */
-function getStudent(req, res, next, id, role) {
-  let sql = 'SELECT * from Student order by StdLastName, StdFirstName, StdSSN;'
-  req.app.locals.db.all(sql, [], (err, rows) => {
-    if (err) {
-      throw err;
-    }
-    req.app.locals.student = rows;
-getEnrollment(req, res, next, id, role);
-  })
-}
-function getEnrollment(req, res, next, id, role) {
-  let sql = 'SELECT * from Enrollment order by StdSSN, OfferNo;';
-  req.app.locals.db.all(sql, [], (err, rows) => {
-    if (err) throw err;
-    req.app.locals.enrollment = rows;
-    listTermCourses(req, res, next, id, role);
-  });
-}
-
-/*
- * If req.body.term_year is set, set req.locals.termcourses to a list of the
- * courses offered in that term and year.  Call listFaculty next.
- */
-function listTermCourses(req, res, next, id, role) {
-  if (req.body.term_year) {
-    console.log(`term_year = "${req.body.term_year}"`);
-    let parts = req.body.term_year.split('_');
-    let term = parts[0];
-    let year = parts[1];
-    console.log(`term="${term}" year="${year}"`);
-    // This is all the columns in the Offering table.  The column names are
-    // specified explicitly in the SQL to control the order of the columns
-    // in the result.
-    let sql = "select OfferNo, CourseNo, OffTerm, OffYear, OffDays, OffTime, OffLocation, FacSSN from Offering where OffTerm=? and OffYear=?;";
-    req.app.locals.db.all(sql, [term, year], (err, rows) => {
-      req.app.locals.termcourses = rows;
-      console.log(`${rows.length} courses`);
-      listFaculty(req, res, next, id, role);
-    });
-  }
-  else {
-    req.app.locals.termcourses = undefined;
-    listFaculty(req, res, next, id, role);
+    listWinterOfferings(req, res, next, id, role);
   }
 }
 
 /*
- * Unconditionally set req.app.locals.facpeople to the FacSSN, FacFirstName, and
- * FacLastName of everyone in the Faculty table.  Call inquireFaculty.
+ * default:
+ * SELECT OfferNo, CourseNo, OffTerm, OffYear, OffDays, OffTime, OffLocation, FacSSN 
+ * FROM Offering 
+ * WHERE OffTerm = 'WINTER' and OffYear = 2025;
+ *
+ * Set req.locals.WinterOfferings to a list of the courses offered in Winter 2025.
+ * Run inquireFaculty() next.
  */
-function listFaculty(req, res, next, id, role) {  
-  let sql = 'SELECT FacSSN, FacFirstName, FacLastName from Faculty;'
-  req.app.locals.db.all(sql, [], (err, rows) => {
-    if (err) {
-      throw err;
-    }
-    req.app.locals.facpeople = rows;
-    inquireFaculty(req, res, next, id, role);
-  })
-}
+function listWinterOfferings(req, res, next, id, role) {
+  // This is all the columns in the Offering table.  The column names are
+  // specified explicitly in the SQL to control the order of the columns
+  // in the result.
+  let sql = "SELECT OfferNo, CourseNo, OffTerm, OffYear, OffDays, OffTime, OffLocation, FacSSN from Offering WHERE OffTerm = 'WINTER' and OffYear = 2025;";
+  
+  if (req.body.role == 'student') {
 
-/*
- * Set req.app.locals.facDetails to all the details about a given faculty member.  Call listStudent.
- */
-function inquireFaculty(req, res, next, id, role) {
-  if (req.body.FacSSN) {
-    sql = 'select FacSSN, FacFirstName, FacLastName, FacCity, FacState, FacZipCode, FacDept, FacRank, FacSalary, FacSupervisor, FacHireDate';
-    sql += ' from Faculty where FacSSN=?;';
-    req.app.locals.db.get(sql, [req.body.FacSSN], (err, row) => {
+    sql = "SELECT CourseNo as 'Course Number', FacFirstName, FacLastName,"
+    sql += " OffLocation as 'Location',"
+    sql += " OffTime as 'Time', OffDays as 'Days'"
+    sql += " FROM Offering natural join Faculty"
+    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
+
+    // SELECT CourseNo as 'Course Number', 
+    //        FacFirstName, FacLastName, // combined into one column as 'Instructor' in student.pug
+    //        OffLocation as 'Location', 
+    //        OffTime as 'Time', OffDays as 'Days'
+    // FROM Offering natural join Faculty
+    // WHERE OffTerm = 'WINTER' and OffYear = 2025;
+  }
+  
+  if (req.body.role == 'registrar') {
+
+    sql = "SELECT OfferNo as 'Offering Number', CourseNo as 'Course Number',"
+    sql += " FacFirstName, FacLastName,"
+    sql += " OffLocation as 'Location',"
+    sql += " OffTime as 'Time', OffDays as 'Days'"
+    sql += " FROM Offering natural join Faculty"
+    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
+
+    // SELECT OfferNo as 'Offering Number', CourseNo as 'Course Number', 
+    //        FacFirstName, FacLastName, // combined into one column as 'Instructor' in registrar.pug
+    //        OffLocation as 'Location', 
+    //        OffTime as 'Time', OffDays as 'Days'
+    // FROM Offering natural join Faculty
+    // WHERE OffTerm = 'WINTER' and OffYear = 2025;
+  }
+
+  console.log("\nlistWinterOfferings, sql: "+sql+"\n");
+
+  req.app.locals.db.get(sql, [req.body.id], (err, row) => {
       if (err) {
         throw err;
       }
       req.app.locals.facDetails = row;
-      listStudent(req, res, next, id, role);
+    });
+
+  inquireFaculty(req, res, next, id, role);
+}
+
+/*
+ * SELECT {*}
+ * FROM Faculty
+ * WHERE FacSSN = {id};
+ *
+ * Set req.app.locals.facDetails to all the details about a given faculty member.
+ * Run teacherTeaching() next.
+ */
+function inquireFaculty(req, res, next, id, role) {
+  if (req.body.id) {
+    // This is all the columns in the Faculty table.  The column names are
+    // specified explicitly in the SQL to control the order of the columns
+    // in the result.
+    sql = 'SELECT FacSSN, FacFirstName, FacLastName, FacCity, FacState, FacZipCode, FacDept, FacRank, FacSalary, FacSupervisor, FacHireDate';
+    sql += ' FROM Faculty WHERE FacSSN = ';
+    sql += id;
+    sql += ';';
+    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+      if (err) {
+        throw err;
+      }
+      req.app.locals.facDetails = row;
     });
   }
   else {
     req.app.locals.facDetails = undefined;
-    listStudent(req, res, next, id, role);
   }
+
+  console.log("\ninquireFaculty, sql: "+sql+"\n");
+
+  teacherTeaching(req, res, next, id, role);
 }
 
 /*
- * Unconditionally set req.app.locals.stdpeople to the StdSSN, StdFirstName, and
- * StdLastName of everyone in the Student table.  Call inquireStudent.
+ * SELECT CourseNo, OffTerm, OffYear 
+ * FROM Offering 
+ * WHERE FacSSN = {id};
+ *
+ * Set req.app.locals.facTeaching to information about the courses a teacher is associated with.
+ * Run teacherGrading() next.
  */
-function listStudent(req, res, next, id, role) {  
-  let sql = 'SELECT StdSSN, StdFirstName, StdLastName from Student;'
-  req.app.locals.db.all(sql, [], (err, rows) => {
-    if (err) {
-      throw err;
-    }
-    req.app.locals.stdpeople = rows;
-    inquireStudent(req, res, next, id, role);
-  })
+function teacherTeaching(req, res, next, id, role) {
+  if (req.body.id) {
+    sql = 'SELECT CourseNo, OffTerm, OffYear';
+    sql += ' FROM Offering';
+    sql += ' WHERE FacSSN = '
+    sql += id;
+    sql += ';';
+    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+      if (err) {
+        throw err;
+      }
+      req.app.locals.facTeaching = row;
+    });
+  }
+  else {
+    req.app.locals.facTeaching = undefined;
+  }
+
+  console.log("\nteacherTeaching, sql: "+sql+"\n");
+
+  teacherGrading(req, res, next, id, role); 
 }
 
 /*
- * Set req.app.locals.stdDetails to all the details about a given faculty member.  Call renderPage.
+ * SELECT StdFirstName, StdLastName, StdSSN, EnrGrade
+ * FROM Student natural join Enrollment natural join Offering
+ * WHERE OfferNo = 9876 and FacSSN = 654321098;
+ * 
+ * Set req.app.locals.teacherGrading to the information needed for the view of the table when editing grades.
+ * Run inquireStudent() next.
+ */
+function teacherGrading(req, res, next, id, role) {
+  if (req.body.id) {
+    sql = 'SELECT StdFirstName, StdLastName, StdSSN, EnrGrade';
+    sql += ' FROM Student natural join Enrollment natural join Offering';
+    sql += ' WHERE OfferNo = '
+    sql += req.body.course_to_grade; // input TBA in teacher.pug
+    sql += ' and FacSSN = '
+    sql += id;
+    sql += ';';
+    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+      if (err) {
+        throw err;
+      }
+      req.app.locals.teacherGrading = row;
+    });
+  }
+  else {
+    req.app.locals.teacherGrading = undefined;
+  }
+
+  console.log("\nteacherGrading, sql: "+sql+"\n");
+
+  inquireStudent(req, res, next, id, role); 
+}
+
+/*
+ * SELECT {*}
+ * FROM Student
+ * WHERE StdSSN = {id};
+ * 
+ * Set req.app.locals.stdDetails to all the details about a given student.
  */
 function inquireStudent(req, res, next, id, role) {
-  if (req.body.StdSSN) {
+  if (req.body.id) {
+    // This is all the columns in the Student table.  The column names are
+    // specified explicitly in the SQL to control the order of the columns
+    // in the result.
     sql = 'select StdSSN, StdFirstName, StdLastName, StdCity, StdState, StdMajor, StdClass, StdGPA, StdZip';
-    sql += ' from Student where StdSSN=?;';
-    req.app.locals.db.get(sql, [req.body.FacSSN], (err, row) => {
+    sql += ' from Student where StdSSN = ';
+    sql += id;
+    sql += ';';
+    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
       if (err) {
         throw err;
       }
       req.app.locals.stdDetails = row;
-      renderPage(req, res, next, id, role);
     });
   }
   else {
     req.app.locals.stdDetails = undefined;
-    renderPage(req, res, next, id, role);
   }
+
+  console.log("\ninquireStudent, sql: "+sql+"\n");
+
+  studentEnrolled(req, res, next, id, role);
+}
+
+/* 
+ *
+ * SELECT CourseNo, OffTerm, OffYear, FacFirstName, FacLastName, EnrGrade 
+ * FROM Enrollment natural join Course natural join Offering natural join Faculty 
+ * WHERE StdSSN = {id};
+ * 
+ * Set req.app.locals.stdEnrolled to a list of pertinent information about the courses a given student is enrolled in.
+ */
+function studentEnrolled(req, res, next, id, role) {
+  if (req.app.locals.stdDetails != undefined) {
+    sql = 'SELECT CourseNo, OffTerm, OffYear, FacFirstName, FacLastName, EnrGrade';
+    sql += ' FROM Enrollment natural join Course natural join Offering natural join Faculty';
+    sql += ' WHERE StdSSN = '
+    sql += id;
+    sql += ';';
+    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+      if (err) {
+        throw err;
+      }
+      req.app.locals.stdEnrolled = row;
+    });
+  }
+  else {
+    req.app.locals.stdEnrolled = undefined;
+  }
+
+  console.log("\nstudentEnrolled, sql: "+sql+"\n");
+
+  renderPage(req, res, next, id, role);
 }
 
 /*
@@ -294,65 +348,28 @@ function renderPage(req, res, next, id, role) {
   if (req.body.role === "student") {
     console.log('Rendering Student Page...\n')
     res.render('student', { id, // input value from index
-                            enrollment: req.app.locals.enrollment,
                             formdata: req.body,
-                            termslist: req.app.locals.termslist, // list of terms in Offering table, from listTerms()
-                            faculty: req.app.locals.faculty, // entire Faculty table, from getFaculty()
-                            student: req.app.locals.student, // entire Student table, from getStudent ()
-                            termslist: req.app.locals.termslist,  // list of terms represented in the Offering table, from listTerms()
-                            termcourses: req.app.locals.termcourses, // list of courses offered in req.body.term_year, from listTermCourses()
-                            facpeople: req.app.locals.facpeople, // list of SSN, first and last names of the Faculty table, from listFaculty()
-                            facDetails: req.app.locals.facDetails, // from inquireFaculty
-                            stdpeople: req.app.locals.stdpeople, // list of SSN, first and last names of the Student table, from listStudent()
-                            stdDetails: req.app.locals.stdDetails // from inquireStudent()
+                            stdDetails: req.app.locals.stdDetails, // from inquireStudent()
+                            enrollment: req.app.locals.stdEnrolled, // from studentEnrolled()
+                            WinterOfferings: req.app.locals.WinterOfferings // from listWinterOfferings()
      });
   } else if (req.body.role === "teacher") {
     console.log('Rendering Teacher Page...\n')
     res.render('teacher', { id, // input value from index
                             formdata: req.body,
-                            termslist: req.app.locals.termslist, // list of terms in Offering table, from listTerms()
-                            faculty: req.app.locals.faculty, // entire Faculty table, from getFaculty()
-                            student: req.app.locals.student, // entire Student table, from getStudent ()
-                            termslist: req.app.locals.termslist,  // list of terms represented in the Offering table, from listTerms()
-                            termcourses: req.app.locals.termcourses, // list of courses offered in req.body.term_year, from listTermCourses()
-                            facpeople: req.app.locals.facpeople, // list of SSN, first and last names of the Faculty table, from listFaculty()
-                            facDetails: req.app.locals.facDetails, // from inquireFaculty
-                            stdpeople: req.app.locals.stdpeople, // list of SSN, first and last names of the Student table, from listStudent()
-                            stdDetails: req.app.locals.stdDetails // from inquireStudent()
+                            facDetails: req.app.locals.facDetails, // from inquireFaculty()
+                            coursesTeaching: req.app.locals.facTeaching, // from teacherTeaching()
+                            stdInfo: req.app.locals.teacherGrading // from teacherGrading()
      });
   } else if (req.body.role === "registrar") {
     console.log('Rendering Registrar Page...\n')
     res.render('registrar', { id, // input value from index
                               formdata: req.body,
-                              termslist: req.app.locals.termslist, // list of terms in Offering table, from listTerms()
-                              faculty: req.app.locals.faculty, // entire Faculty table, from getFaculty()
-                              student: req.app.locals.student, // entire Student table, from getStudent ()
-                              termslist: req.app.locals.termslist,  // list of terms represented in the Offering table, from listTerms()
-                              termcourses: req.app.locals.termcourses, // list of courses offered in req.body.term_year, from listTermCourses()
-                              facpeople: req.app.locals.facpeople, // list of SSN, first and last names of the Faculty table, from listFaculty()
-                              facDetails: req.app.locals.facDetails, // from inquireFaculty
-                              stdpeople: req.app.locals.stdpeople, // list of SSN, first and last names of the Student table, from listStudent()
-                              stdDetails: req.app.locals.stdDetails // from inquireStudent()
+                              WinterOfferings: req.app.locals.WinterOfferings // from listWinterOfferings()
      });
   } else {
     res.send('Invalid role');
   }
 }
-
-// app.get('/', (req, res) => {
-//   res.render('index');
-// });
-
-// app.post('/role', (req, res) => {
-//   const { id, role } = req.body;
-
-//   if (role === 'student') {
-//     res.render('student', { id });
-//   } else if (role === 'teacher') {
-//     res.render('teacher', { id });
-//   } else {
-//     res.send('Invalid role');
-//   }
-// });
 
 module.exports = router;
