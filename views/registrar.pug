@@ -3,5 +3,69 @@ html
   head
     title Registrar Page
   body
-    h1 Registrar Page
-    p Your ID: #{id}
+    h1 Registrar Page - ID: #{id}
+    h2 Offerings schecduled for #{term} #{year}
+    if offerings.length
+      table
+        thead
+          tr
+            th Offering#
+            th Course
+            th Instructor
+            th Location
+            th Time
+            th Days
+        tbody
+          each o in offerings
+            tr
+              td #{o.offering_no}
+              td #{o.couse_no}
+              td #{o.location ||''}
+              td #{o.time || ''}
+              td #{o.days || ''}
+                //Edit form (inline)
+                form(action= `/resistrar/${id}/edit_offering?${o.offering_no}` method='post' style="display:inline-block; margin-right:10ox;")
+                  select(name="teacher_id")
+                    option(value="")--None--
+                    each f in teacher
+                      option(value=f.teacher_id selected=(f.faculty_id == o.teacher_id)) 
+                    input(type="text" name"location" value= o.olocation placeholder="Location")
+                    input(type="text" name"time" value= o.time placeholder="Time")
+                    input(type="text" name"days" value= o.days placeholder="Days")
+                    label
+                     input(type="checkbox" name"offered" checked=(o.offered ? true : false))
+                     | Offered
+                    button(type="submit") Update
+                  form(action=`(action=`/registrar/${id}/cancel_offering/${o.offering_no}` method="post" style="display:inline-block")
+                    button(type="submit" onclick="return confirm('cancel offering?')") Cancel
+    else
+      p No offering schecduled for next term.
+    h2 Add new offering for #{term} #{year}
+    form(action=`/registrar/${id}/add_offering` method="post")
+      label Course:
+      select(name="course_no")
+        each c in courses
+          option(value=c.course_no) #{c.course_no} #{c.title} (#{c.credits}cr)
+        br
+        label Offering #:
+        input(type="text" name="offering_no" requiered)
+        br
+        label Instructor:
+        select(name= "teacher_id")
+          option(value="") --None--
+          eache f in faculty
+            option(value=t.teacher_id) 
+        br 
+        label location:
+        input(type="text" name="location")
+        br 
+        label time:
+        input(type="text" name="time")
+        br 
+        label days:
+        input(type="text" name="days")
+        br
+        button(type="submit) Add Offering
+     
+      
+
