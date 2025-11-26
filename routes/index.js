@@ -159,16 +159,16 @@ function listWinterOfferings(req, res, next, id) {
 
   console.log("\n/---/\nlistWinterOfferings\n   sql: "+sql+"");
 
-  req.app.locals.db.get(sql, [], (err, rows) => {
+  req.app.locals.db.all(sql, [], (err, rows) => {
       if (err) {
         throw err;
       }
       req.app.locals.WinterOfferings = rows;
+      // log output for debugging
+      console.log("   WinterOfferings (from callback): ", rows, "\n/---/");
+      // continue after getting WinterOfferings
+      inquireFaculty(req, res, next, id);
     });
-
-  console.log("   WinterOfferings: "+req.app.locals.WinterOfferings+"\n/---/");
-
-  inquireFaculty(req, res, next, id);
 }
 
 /*
@@ -185,24 +185,24 @@ function inquireFaculty(req, res, next, id) {
     // specified explicitly in the SQL to control the order of the columns
     // in the result.
     sql = 'SELECT FacSSN, FacFirstName, FacLastName, FacCity, FacState, FacZipCode, FacDept, FacRank, FacSalary, FacSupervisor, FacHireDate';
-    sql += ' FROM Faculty WHERE FacSSN = ';
-    sql += id;
-    sql += ';';
+    sql += ' FROM Faculty ';
+    sql += ' WHERE FacSSN = ?;';
 
     req.app.locals.db.all(sql, [id], (err, row) => {
       if (err) {
         throw err;
       }
       req.app.locals.facDetails = row;
+      // log output for debugging
+      console.log("\n/---/\ninquireFaculty (callback)\n   sql: "+sql+"\n   facDetails: ", row, "\n/---/");
+      // continue after getting facDetails
+      teacherTeaching(req, res, next, id);
     });
   }
   else {
     req.app.locals.facDetails = undefined;
+    teacherTeaching(req, res, next, id);
   }
-
-  console.log("\n/---/\ninquireFaculty\n   sql: "+sql+"\n   facDetails: "+req.app.locals.facDetails+"\n/---/");
-
-  teacherTeaching(req, res, next, id);
 }
 
 /*
@@ -211,29 +211,28 @@ function inquireFaculty(req, res, next, id) {
  * WHERE FacSSN = {id};
  *
  * Set req.app.locals.facTeaching to information about the courses a teacher is associated with.
- * Run teacherGrading() next.
+ * Run findTeacherGrading() next.
  */
 function teacherTeaching(req, res, next, id) {
   if (req.body.id) {
     sql = 'SELECT CourseNo, OffTerm, OffYear';
     sql += ' FROM Offering';
-    sql += ' WHERE FacSSN = '
-    sql += id;
-    sql += ';';
-    req.app.locals.db.all(sql, [id], (err, row) => {
+    sql += ' WHERE FacSSN = ?;';
+    req.app.locals.db.all(sql, [id], (err, rows) => {
       if (err) {
         throw err;
       }
-      req.app.locals.facTeaching = row;
+      req.app.locals.facTeaching = rows;
+      // log output for debugging
+      console.log("\n/---/\nteacherTeaching\n   sql: "+sql+"\n   facTeaching: ", rows, "\n/---/");
+      // continue after getting facTeaching
+      findTeacherGrading(req, res, next, id); 
     });
   }
   else {
     req.app.locals.facTeaching = undefined;
+    findTeacherGrading(req, res, next, id); 
   }
-
-  console.log("\n/---/\nteacherTeaching\n   sql: "+sql+"\n   facTeaching: "+req.app.locals.facTeaching+"\n/---/");
-
-  teacherGrading(req, res, next, id); 
 }
 
 /*
@@ -245,29 +244,27 @@ function teacherTeaching(req, res, next, id) {
  * Set req.app.locals.teacherGrading to the information needed for the view of the table when editing grades.
  * Run inquireStudent() next.
  */
-function teacherGrading(req, res, next, id) {
+function findTeacherGrading(req, res, next, id) {
   if (req.body.id) {
     sql = 'SELECT (StdFirstName || " " || StdLastName) as "Student", StdSSN as "Student ID", EnrGrade as "Grade"';
     sql += ' FROM Student natural join Enrollment natural join Offering';
-    sql += ' WHERE OfferNo = '
-    sql += req.body.course_to_grade; // input TBA in teacher.pug
-    sql += ' and FacSSN = '
-    sql += id;
-    sql += ';';
-    req.app.locals.db.all(sql, [req.body.course_to_grade, id], (err, rows) => {
+    sql += ' WHERE OfferNo = ?';
+    sql += ' and FacSSN = ?;';
+    req.app.locals.db.all(sql, [req.body.course_to_grade, id], (err, rows) => { // course_to_grade TBA, from teacher.pug form
       if (err) {
         throw err;
       }
       req.app.locals.teacherGrading = rows;
+      // log output for debugging
+      console.log("\n/---/\nfindTeacherGrading\n   sql: "+sql+"\n   teacherGrading: ", rows, "\n/---/");
+      // continue after getting teacherGrading
+      inquireStudent(req, res, next, id); 
     });
   }
   else {
     req.app.locals.teacherGrading = undefined;
+    inquireStudent(req, res, next, id); 
   }
-
-  console.log("\n/---/\nteacherGrading\n   sql: "+sql+"\n   teacherGrading: "+req.app.locals.teacherGrading+"\n/---/");
-
-  inquireStudent(req, res, next, id); 
 }
 
 /*
@@ -291,15 +288,16 @@ function inquireStudent(req, res, next, id) {
         throw err;
       }
       req.app.locals.stdDetails = row;
+      // log output for debugging
+      console.log("\n/---/\ninquireStudent (callback)\n   sql: "+sql+"\n   stdDetails: ", row, "\n/---/");
+      // continue after getting stdDetails
+      studentEnrolled(req, res, next, id);
     });
   }
   else {
     req.app.locals.stdDetails = undefined;
+    studentEnrolled(req, res, next, id);
   }
-
-  console.log("\n/---/\ninquireStudent\n   sql: "+sql+"\n   stdDetails: "+req.app.locals.stdDetails+"\n/---/");
-
-  studentEnrolled(req, res, next, id);
 }
 
 /* 
@@ -324,15 +322,16 @@ function studentEnrolled(req, res, next, id) {
         throw err;
       }
       req.app.locals.stdEnrolled = rows;
+      // log output for debugging
+      console.log("\n/---/\nstudentEnrolled\n   sql: "+sql+"\n   stdEnrolled: ", rows, "\n/---/");
+      // continue after getting stdEnrolled
+      renderPage(req, res, next, id);
     });
   }
   else {
     req.app.locals.stdEnrolled = undefined;
+    renderPage(req, res, next, id);
   }
-
-  console.log("\n/---/\nstudentEnrolled\n   sql: "+sql+"\n   stdEnrolled: "+req.app.locals.stdEnrolled+"\n/---/");
-
-  renderPage(req, res, next, id);
 }
 
 /*
@@ -355,7 +354,7 @@ function renderPage(req, res, next, id) {
                             formdata: req.body,
                             facDetails: req.app.locals.facDetails, // from inquireFaculty()
                             coursesTeaching: req.app.locals.facTeaching, // from teacherTeaching()
-                            stdInfo: req.app.locals.teacherGrading // from teacherGrading()
+                            stdInfo: req.app.locals.teacherGrading // from findTeacherGrading()
      });
   } else if (req.body.role === "registrar") {
     console.log('Rendering Registrar Page...\n')
