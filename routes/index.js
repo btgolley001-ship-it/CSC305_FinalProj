@@ -116,7 +116,7 @@ function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this
  * WHERE OffTerm = 'WINTER' and OffYear = 2025;
  *
  * Set req.app.locals.WinterOfferings to a list of the courses offered in Winter 2025.
- * Run inquireFaculty() next.
+ * Run listStudentIDs() next.
  */
 function listWinterOfferings(req, res, next, id) {
   // This is all the columns in the Offering table.  The column names are
@@ -126,13 +126,13 @@ function listWinterOfferings(req, res, next, id) {
   
   if (req.body.role == 'student') {
 
-    sql = "SELECT CourseNo as 'Course Number', (FacFirstName || ' ' || FacLastName) as 'Instructor',"
+    sql = "SELECT CourseNo, (FacFirstName || ' ' || FacLastName) as 'Instructor',"
     sql += " OffLocation as 'Location',"
     sql += " OffTime as 'Time', OffDays as 'Days'"
     sql += " FROM Offering natural join Faculty"
     sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
 
-    // SELECT CourseNo as 'Course Number', 
+    // SELECT CourseNo, 
     //        (FacFirstName || ' ' || FacLastName) as 'Instructor',
     //        OffLocation as 'Location', 
     //        OffTime as 'Time', OffDays as 'Days'
@@ -142,14 +142,14 @@ function listWinterOfferings(req, res, next, id) {
   
   if (req.body.role == 'registrar') {
 
-    sql = "SELECT OfferNo as 'Offering Number', CourseNo as 'Course Number',"
+    sql = "SELECT OfferNo, CourseNo,"
     sql += " FacFirstName, FacLastName,"
     sql += " OffLocation as 'Location',"
     sql += " OffTime as 'Time', OffDays as 'Days'"
     sql += " FROM Offering natural join Faculty"
     sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
 
-    // SELECT OfferNo as 'Offering Number', CourseNo as 'Course Number', 
+    // SELECT OfferNo, CourseNo, 
     //        (FacFirstName || " " || FacLastName) as "Instructor",
     //        OffLocation as 'Location', 
     //        OffTime as 'Time', OffDays as 'Days'
@@ -167,6 +167,72 @@ function listWinterOfferings(req, res, next, id) {
       // log output for debugging
       console.log("   WinterOfferings (from callback): ", rows, "\n/---/");
       // continue after getting WinterOfferings
+      listStudentIDs(req, res, next, id);
+    });
+}
+
+/*
+ * SELECT StdSSN, (StdFirstName || ' ' || StdLastName) as 'Student'
+ * FROM Student
+ * ORDER BY StdSSN;
+ * 
+ * Unconditionally set req.app.locals.studentIDs to a list of all student IDs.
+ * Run listFacultyIDs() next.
+ */
+function listStudentIDs(req, res, next, id) {
+  let sql = "SELECT StdSSN, (StdFirstName || ' ' || StdLastName) as 'Student' FROM Student ORDER BY StdSSN;";
+  req.app.locals.db.all(sql, [], (err, rows) => {
+      if (err) {
+        throw err;
+      }
+      req.app.locals.studentIDs = rows;
+      // log output for debugging
+      console.log("\n/---/\nlistStudentIDs\n   studentIDs (from callback): ", rows, "\n/---/");
+      // continue after getting studentIDs
+      listFacultyIDs(req, res, next, id);
+    });
+}
+
+/*
+ * SELECT FacSSN, (FacFirstName || ' ' || FacLastName) as 'Instructor'
+ * FROM Faculty;
+ * ORDER BY FacSSN;
+ * 
+ * Unconditionally set req.app.locals.facultyIDs to a list of all faculty IDs.
+ * Run listCourses() next.
+ */
+function listFacultyIDs(req, res, next, id) {
+  let sql = "SELECT FacSSN, (FacFirstName || ' ' || FacLastName) as 'Instructor' FROM Faculty ORDER BY FacSSN;";
+  req.app.locals.db.all(sql, [], (err, rows) => {
+      if (err) {
+        throw err;
+      }
+      req.app.locals.facultyIDs = rows;
+      // log output for debugging
+      console.log("\n/---/\nlistFacultyIDs\n   facultyIDs (from callback): ", rows, "\n/---/");
+      // continue after getting facultyIDs
+      listCourses(req, res, next, id);
+    });
+}
+
+/*
+ * SELECT CourseNo, CrsDesc, CrsUnits
+ * FROM Course
+ * ORDER BY CourseNo;
+ * 
+ * Unconditionally set req.app.locals.courses to the entire Course table.
+ * Run inquireFaculty() next.
+ */
+function listCourses(req, res, next, id) {
+  let sql = "SELECT CourseNo, CrsDesc, CrsUnits FROM Course ORDER BY CourseNo;";
+  req.app.locals.db.all(sql, [], (err, rows) => {
+      if (err) {
+        throw err;
+      }
+      req.app.locals.courses = rows;
+      // log output for debugging
+      console.log("\n/---/\nlistCourses\n   courses (from callback): ", rows, "\n/---/");
+      // continue after getting courses
       inquireFaculty(req, res, next, id);
     });
 }
@@ -180,7 +246,10 @@ function listWinterOfferings(req, res, next, id) {
  * Run teacherTeaching() next.
  */
 function inquireFaculty(req, res, next, id) {
-  if (req.body.id) {
+  // Check that the given id is in the list of faculty IDs. If not, skip the query.
+  const idStr = String(id);
+  const facultyIDs = (req.app.locals.facultyIDs || []).map(obj => String(obj.FacSSN));
+  if (facultyIDs.includes(idStr)) {
     // This is all the columns in the Faculty table.  The column names are
     // specified explicitly in the SQL to control the order of the columns
     // in the result.
@@ -214,7 +283,7 @@ function inquireFaculty(req, res, next, id) {
  * Run findTeacherGrading() next.
  */
 function teacherTeaching(req, res, next, id) {
-  if (req.body.id) {
+  if (req.app.locals.facDetails != undefined) {
     sql = 'SELECT CourseNo, OffTerm, OffYear';
     sql += ' FROM Offering';
     sql += ' WHERE FacSSN = ?;';
@@ -245,7 +314,7 @@ function teacherTeaching(req, res, next, id) {
  * Run inquireStudent() next.
  */
 function findTeacherGrading(req, res, next, id) {
-  if (req.body.id) {
+  if (req.app.locals.facDetails != undefined && req.body.course_to_grade) {
     sql = 'SELECT (StdFirstName || " " || StdLastName) as "Student", StdSSN as "Student ID", EnrGrade as "Grade"';
     sql += ' FROM Student natural join Enrollment natural join Offering';
     sql += ' WHERE OfferNo = ?';
@@ -275,14 +344,15 @@ function findTeacherGrading(req, res, next, id) {
  * Set req.app.locals.stdDetails to all the details about a given student.
  */
 function inquireStudent(req, res, next, id) {
-  if (req.body.id) {
+  // Check that the given id is in the list of student IDs. If not, skip the query.
+  const idStr = String(id);
+  const studentIDs = (req.app.locals.studentIDs || []).map(obj => String(obj.StdSSN));
+  if (studentIDs.includes(idStr)) {    
     // This is all the columns in the Student table.  The column names are
     // specified explicitly in the SQL to control the order of the columns
     // in the result.
     sql = 'SELECT StdSSN, StdFirstName, StdLastName, StdCity, StdState, StdZip, StdMajor, StdClass, StdGPA';
-    sql += ' FROM Student WHERE StdSSN = ';
-    sql += id;
-    sql += ';';
+    sql += ' FROM Student WHERE StdSSN = ?;';
     req.app.locals.db.all(sql, [id], (err, row) => {
       if (err) {
         throw err;
@@ -360,7 +430,10 @@ function renderPage(req, res, next, id) {
     console.log('Rendering Registrar Page...\n')
     res.render('registrar', { id, // input value from index
                               formdata: req.body,
-                              WinterOfferings: req.app.locals.WinterOfferings // from listWinterOfferings()
+                              WinterOfferings: req.app.locals.WinterOfferings, // from listWinterOfferings()
+                              studentIDs: req.app.locals.studentIDs, // from listStudentIDs()
+                              facultyIDs: req.app.locals.facultyIDs, // from listFacultyIDs()
+                              courses: req.app.locals.courses // from listCourses()
      });
   } else {
     res.send('Invalid role');
