@@ -41,7 +41,7 @@ function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this
       for (field of fields) {
         sql += `,${field}`;
       }
-      sql += `) VALUES ('${req.body.FacSSN}'`;
+      sql += `) VALUES ('${id}'`;
       for (field of fields) {
         sql += `,'${req.body[field]}'`;
       }
@@ -52,8 +52,8 @@ function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this
     // course_drop
     
     else if (req.body.action == 'course_drop') {
-      sql = `DELETE * FROM Enrollment WHERE StdSSN='${req.body.StdSSN}' and OfferNo=`;
-      sql += `,'${req.body['OfferNo']}'`;
+      sql = `DELETE * FROM Enrollment WHERE StdSSN='${id}' and OfferNo=`;
+      sql += `,'${req.body.OfferNo}'`;
       sql += ';';
       // DELETE * FROM Enrollment WHERE StdSSN = '{StdSNN}' and OfferNo = '{OfferNo}'
     }
@@ -84,9 +84,6 @@ function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this
     if (req.body.action == 'course_drop') {
       sql = `UPDATE Enrollment SET EnrGrade = '${req.body.EnrGrade}'`;
       update_fields = fields.slice(3,7).concat(['FacSupervisor','FacZipCode']);
-      for (field of update_fields) {
-        sql += `,${field} = '${req.body[field]}'`;
-      }
       sql += ` WHERE StdSSN = '${req.body.StdSSN}';`;
       sql += ` and OfferNo = '${req.body.OfferNo}';`;
       // UPDATE Enrollment SET EnrGrade = {EnrGrade} WHERE StdSSN = {StdSSN} and OfferNo = {OfferNo};
@@ -129,17 +126,14 @@ function listWinterOfferings(req, res, next, id) {
   
   if (req.body.role == 'student') {
 
-    sql = "SELECT CourseNo as 'Course Number', FacFirstName, FacLastName,"
+    sql = "SELECT CourseNo as 'Course Number', (FacFirstName || ' ' || FacLastName) as 'Instructor',"
     sql += " OffLocation as 'Location',"
     sql += " OffTime as 'Time', OffDays as 'Days'"
     sql += " FROM Offering natural join Faculty"
-    // sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;" 
-        // current issue: there is no such thing as OffYear = 2025 in this database. 
-        // going to mark it as 2005 to get any output.
-    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2005;"
+    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
 
     // SELECT CourseNo as 'Course Number', 
-    //        FacFirstName, FacLastName, // combined into one column as 'Instructor' in student.pug
+    //        (FacFirstName || ' ' || FacLastName) as 'Instructor',
     //        OffLocation as 'Location', 
     //        OffTime as 'Time', OffDays as 'Days'
     // FROM Offering natural join Faculty
@@ -153,13 +147,10 @@ function listWinterOfferings(req, res, next, id) {
     sql += " OffLocation as 'Location',"
     sql += " OffTime as 'Time', OffDays as 'Days'"
     sql += " FROM Offering natural join Faculty"
-    // sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;" 
-        // current issue: there is no such thing as OffYear = 2025 in this database. 
-        // going to mark it as 2005 to get any output.
-    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2005;"
+    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
 
     // SELECT OfferNo as 'Offering Number', CourseNo as 'Course Number', 
-    //        FacFirstName, FacLastName, // combined into one column as 'Instructor' in registrar.pug
+    //        (FacFirstName || " " || FacLastName) as "Instructor",
     //        OffLocation as 'Location', 
     //        OffTime as 'Time', OffDays as 'Days'
     // FROM Offering natural join Faculty
@@ -246,16 +237,17 @@ function teacherTeaching(req, res, next, id) {
 }
 
 /*
- * SELECT StdFirstName, StdLastName, StdSSN, EnrGrade
+ * SELECT (StdFirstName || " " || StdLastName) as "Student",
+ *         StdSSN as "Student ID", EnrGrade as "Grade"
  * FROM Student natural join Enrollment natural join Offering
- * WHERE OfferNo = 9876 and FacSSN = 654321098;
+ * WHERE OfferNo = {OfferNo} and FacSSN = {id};
  * 
  * Set req.app.locals.teacherGrading to the information needed for the view of the table when editing grades.
  * Run inquireStudent() next.
  */
 function teacherGrading(req, res, next, id) {
   if (req.body.id) {
-    sql = 'SELECT StdFirstName, StdLastName, StdSSN, EnrGrade';
+    sql = 'SELECT (StdFirstName || " " || StdLastName) as "Student", StdSSN as "Student ID", EnrGrade as "Grade"';
     sql += ' FROM Student natural join Enrollment natural join Offering';
     sql += ' WHERE OfferNo = '
     sql += req.body.course_to_grade; // input TBA in teacher.pug
@@ -290,7 +282,7 @@ function inquireStudent(req, res, next, id) {
     // This is all the columns in the Student table.  The column names are
     // specified explicitly in the SQL to control the order of the columns
     // in the result.
-    sql = 'SELECT StdSSN, StdFirstName, StdLastName, StdCity, StdState, StdMajor, StdClass, StdGPA, StdZip';
+    sql = 'SELECT StdSSN, StdFirstName, StdLastName, StdCity, StdState, StdZip, StdMajor, StdClass, StdGPA';
     sql += ' FROM Student WHERE StdSSN = ';
     sql += id;
     sql += ';';
@@ -312,7 +304,9 @@ function inquireStudent(req, res, next, id) {
 
 /* 
  *
- * SELECT CourseNo, OffTerm, OffYear, FacFirstName, FacLastName, EnrGrade 
+ * SELECT CourseNo as "Course Number", OffTerm as "Term", OffYear as "Year", 
+ * (FacFirstName || " " || FacLastName) as "Instructor",
+ * EnrGrade as "Grade"
  * FROM Enrollment natural join Course natural join Offering natural join Faculty 
  * WHERE StdSSN = {id};
  * 
@@ -320,7 +314,7 @@ function inquireStudent(req, res, next, id) {
  */
 function studentEnrolled(req, res, next, id) {
   if (req.app.locals.stdDetails != undefined) {
-    sql = 'SELECT CourseNo, OffTerm, OffYear, FacFirstName, FacLastName, EnrGrade';
+    sql = 'SELECT CourseNo as "Course Number", OffTerm as "Term", OffYear as "Year", (FacFirstName || " " || FacLastName) as "Instructor", EnrGrade as "Grade"';
     sql += ' FROM Enrollment natural join Course natural join Offering natural join Faculty';
     sql += ' WHERE StdSSN = '
     sql += id;
@@ -346,7 +340,7 @@ function studentEnrolled(req, res, next, id) {
  * depending on what role was selected in index.
  */
 function renderPage(req, res, next, id) {
-  console.log('\nrenderPage() called. role: '+JSON.stringify(req.query))
+  console.log('\nrenderPage() called. role: '+JSON.stringify(req.body.role))
   if (req.body.role === "student") {
     console.log('Rendering Student Page...\n')
     res.render('student', { id, // input value from index
