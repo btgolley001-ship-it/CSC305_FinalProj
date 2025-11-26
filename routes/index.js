@@ -16,23 +16,16 @@ router.post('/role', function(req, res, next) {
   var { id, role } = req.body; 
 
   console.log('req.body.id: '+JSON.stringify(req.body.id)
-              +'\n\nid: '+JSON.stringify(id)
-              +'\n\nreq.body.role: '+JSON.stringify(req.body.role)
-              +'\n\nrole: '+JSON.stringify(role)
-              )
-  /* req.body.role isn't saving to role. i don't know why.
-   * seems like it's being recorded fine here. but when it gets to renderpage(), role is made empty.
-   * duct-tape solution: replace "role" w/ "req.body.role" when running renderpage()
-   */
+              +'\nid: '+JSON.stringify(id)+'\n')
 
-  changeEnrollment(req, res, next, id, role);
+  changeEnrollment(req, res, next, id);
 });
 
 /*
  * If there is a query to run to change the Enrollment table, run it.
  * In any case, run listWinterOfferings next.
  */
-function changeEnrollment(req, res, next, id, role) { // REMINDER: need to fix up this code!
+function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this code!
   console.log(`changeEnrollment: ${req.body.action}`);
 
   // student.pug changes
@@ -74,7 +67,7 @@ function changeEnrollment(req, res, next, id, role) { // REMINDER: need to fix u
         throw err;
       }
       console.log(`${this.changes} rows affected.`)
-      listWinterOfferings(req, res, next, id, role);
+      listWinterOfferings(req, res, next, id);
     }
 
     req.app.locals.db.run(sql, [], sqlCallback);
@@ -89,17 +82,17 @@ function changeEnrollment(req, res, next, id, role) { // REMINDER: need to fix u
     // student_grade
 
     if (req.body.action == 'course_drop') {
-      sql = `Update Enrollment SET EnrGrade = '${req.body.EnrGrade}'`;
+      sql = `UPDATE Enrollment SET EnrGrade = '${req.body.EnrGrade}'`;
       update_fields = fields.slice(3,7).concat(['FacSupervisor','FacZipCode']);
       for (field of update_fields) {
         sql += `,${field} = '${req.body[field]}'`;
       }
       sql += ` WHERE StdSSN = '${req.body.StdSSN}';`;
       sql += ` and OfferNo = '${req.body.OfferNo}';`;
-      // Update Enrollment SET EnrGrade = {EnrGrade} WHERE StdSSN = {StdSSN} and OfferNo = {OfferNo};
+      // UPDATE Enrollment SET EnrGrade = {EnrGrade} WHERE StdSSN = {StdSSN} and OfferNo = {OfferNo};
     }
 
-    ("\nchangeEnrollment, if role = 'teacher', sql: "+sql+"\n");
+    console.log("\nchangeEnrollment, if role = 'teacher', sql: "+sql+"\n");
 
     // Callback function defined in the old style so that this.changes gets the
     //     number of rows affected.
@@ -108,14 +101,14 @@ function changeEnrollment(req, res, next, id, role) { // REMINDER: need to fix u
         throw err;
       }
       console.log(`${this.changes} rows affected.`)
-      listWinterOfferings(req, res, next, id, role);
+      listWinterOfferings(req, res, next, id);
     }
 
     req.app.locals.db.run(sql, [], sqlCallback);
   }
 
   else {
-    listWinterOfferings(req, res, next, id, role);
+    listWinterOfferings(req, res, next, id);
   }
 }
 
@@ -125,14 +118,14 @@ function changeEnrollment(req, res, next, id, role) { // REMINDER: need to fix u
  * FROM Offering 
  * WHERE OffTerm = 'WINTER' and OffYear = 2025;
  *
- * Set req.locals.WinterOfferings to a list of the courses offered in Winter 2025.
+ * Set req.app.locals.WinterOfferings to a list of the courses offered in Winter 2025.
  * Run inquireFaculty() next.
  */
-function listWinterOfferings(req, res, next, id, role) {
+function listWinterOfferings(req, res, next, id) {
   // This is all the columns in the Offering table.  The column names are
   // specified explicitly in the SQL to control the order of the columns
   // in the result.
-  let sql = "SELECT OfferNo, CourseNo, OffTerm, OffYear, OffDays, OffTime, OffLocation, FacSSN from Offering WHERE OffTerm = 'WINTER' and OffYear = 2025;";
+  let sql = "SELECT OfferNo, CourseNo, OffTerm, OffYear, OffDays, OffTime, OffLocation, FacSSN FROM Offering WHERE OffTerm = 'WINTER' and OffYear = 2025;";
   
   if (req.body.role == 'student') {
 
@@ -140,7 +133,10 @@ function listWinterOfferings(req, res, next, id, role) {
     sql += " OffLocation as 'Location',"
     sql += " OffTime as 'Time', OffDays as 'Days'"
     sql += " FROM Offering natural join Faculty"
-    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
+    // sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;" 
+        // current issue: there is no such thing as OffYear = 2025 in this database. 
+        // going to mark it as 2005 to get any output.
+    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2005;"
 
     // SELECT CourseNo as 'Course Number', 
     //        FacFirstName, FacLastName, // combined into one column as 'Instructor' in student.pug
@@ -157,7 +153,10 @@ function listWinterOfferings(req, res, next, id, role) {
     sql += " OffLocation as 'Location',"
     sql += " OffTime as 'Time', OffDays as 'Days'"
     sql += " FROM Offering natural join Faculty"
-    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
+    // sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;" 
+        // current issue: there is no such thing as OffYear = 2025 in this database. 
+        // going to mark it as 2005 to get any output.
+    sql += " WHERE OffTerm = 'WINTER' and OffYear = 2005;"
 
     // SELECT OfferNo as 'Offering Number', CourseNo as 'Course Number', 
     //        FacFirstName, FacLastName, // combined into one column as 'Instructor' in registrar.pug
@@ -167,16 +166,18 @@ function listWinterOfferings(req, res, next, id, role) {
     // WHERE OffTerm = 'WINTER' and OffYear = 2025;
   }
 
-  console.log("\nlistWinterOfferings, sql: "+sql+"\n");
+  console.log("\n/---/\nlistWinterOfferings\n   sql: "+sql+"");
 
-  req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+  req.app.locals.db.get(sql, [], (err, rows) => {
       if (err) {
         throw err;
       }
-      req.app.locals.facDetails = row;
+      req.app.locals.WinterOfferings = rows;
     });
 
-  inquireFaculty(req, res, next, id, role);
+  console.log("   WinterOfferings: "+req.app.locals.WinterOfferings+"\n/---/");
+
+  inquireFaculty(req, res, next, id);
 }
 
 /*
@@ -187,7 +188,7 @@ function listWinterOfferings(req, res, next, id, role) {
  * Set req.app.locals.facDetails to all the details about a given faculty member.
  * Run teacherTeaching() next.
  */
-function inquireFaculty(req, res, next, id, role) {
+function inquireFaculty(req, res, next, id) {
   if (req.body.id) {
     // This is all the columns in the Faculty table.  The column names are
     // specified explicitly in the SQL to control the order of the columns
@@ -196,7 +197,8 @@ function inquireFaculty(req, res, next, id, role) {
     sql += ' FROM Faculty WHERE FacSSN = ';
     sql += id;
     sql += ';';
-    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+
+    req.app.locals.db.all(sql, [id], (err, row) => {
       if (err) {
         throw err;
       }
@@ -207,9 +209,9 @@ function inquireFaculty(req, res, next, id, role) {
     req.app.locals.facDetails = undefined;
   }
 
-  console.log("\ninquireFaculty, sql: "+sql+"\n");
+  console.log("\n/---/\ninquireFaculty\n   sql: "+sql+"\n   facDetails: "+req.app.locals.facDetails+"\n/---/");
 
-  teacherTeaching(req, res, next, id, role);
+  teacherTeaching(req, res, next, id);
 }
 
 /*
@@ -220,14 +222,14 @@ function inquireFaculty(req, res, next, id, role) {
  * Set req.app.locals.facTeaching to information about the courses a teacher is associated with.
  * Run teacherGrading() next.
  */
-function teacherTeaching(req, res, next, id, role) {
+function teacherTeaching(req, res, next, id) {
   if (req.body.id) {
     sql = 'SELECT CourseNo, OffTerm, OffYear';
     sql += ' FROM Offering';
     sql += ' WHERE FacSSN = '
     sql += id;
     sql += ';';
-    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+    req.app.locals.db.all(sql, [id], (err, row) => {
       if (err) {
         throw err;
       }
@@ -238,9 +240,9 @@ function teacherTeaching(req, res, next, id, role) {
     req.app.locals.facTeaching = undefined;
   }
 
-  console.log("\nteacherTeaching, sql: "+sql+"\n");
+  console.log("\n/---/\nteacherTeaching\n   sql: "+sql+"\n   facTeaching: "+req.app.locals.facTeaching+"\n/---/");
 
-  teacherGrading(req, res, next, id, role); 
+  teacherGrading(req, res, next, id); 
 }
 
 /*
@@ -251,7 +253,7 @@ function teacherTeaching(req, res, next, id, role) {
  * Set req.app.locals.teacherGrading to the information needed for the view of the table when editing grades.
  * Run inquireStudent() next.
  */
-function teacherGrading(req, res, next, id, role) {
+function teacherGrading(req, res, next, id) {
   if (req.body.id) {
     sql = 'SELECT StdFirstName, StdLastName, StdSSN, EnrGrade';
     sql += ' FROM Student natural join Enrollment natural join Offering';
@@ -260,20 +262,20 @@ function teacherGrading(req, res, next, id, role) {
     sql += ' and FacSSN = '
     sql += id;
     sql += ';';
-    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+    req.app.locals.db.all(sql, [req.body.course_to_grade, id], (err, rows) => {
       if (err) {
         throw err;
       }
-      req.app.locals.teacherGrading = row;
+      req.app.locals.teacherGrading = rows;
     });
   }
   else {
     req.app.locals.teacherGrading = undefined;
   }
 
-  console.log("\nteacherGrading, sql: "+sql+"\n");
+  console.log("\n/---/\nteacherGrading\n   sql: "+sql+"\n   teacherGrading: "+req.app.locals.teacherGrading+"\n/---/");
 
-  inquireStudent(req, res, next, id, role); 
+  inquireStudent(req, res, next, id); 
 }
 
 /*
@@ -283,16 +285,16 @@ function teacherGrading(req, res, next, id, role) {
  * 
  * Set req.app.locals.stdDetails to all the details about a given student.
  */
-function inquireStudent(req, res, next, id, role) {
+function inquireStudent(req, res, next, id) {
   if (req.body.id) {
     // This is all the columns in the Student table.  The column names are
     // specified explicitly in the SQL to control the order of the columns
     // in the result.
-    sql = 'select StdSSN, StdFirstName, StdLastName, StdCity, StdState, StdMajor, StdClass, StdGPA, StdZip';
-    sql += ' from Student where StdSSN = ';
+    sql = 'SELECT StdSSN, StdFirstName, StdLastName, StdCity, StdState, StdMajor, StdClass, StdGPA, StdZip';
+    sql += ' FROM Student WHERE StdSSN = ';
     sql += id;
     sql += ';';
-    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+    req.app.locals.db.all(sql, [id], (err, row) => {
       if (err) {
         throw err;
       }
@@ -303,9 +305,9 @@ function inquireStudent(req, res, next, id, role) {
     req.app.locals.stdDetails = undefined;
   }
 
-  console.log("\ninquireStudent, sql: "+sql+"\n");
+  console.log("\n/---/\ninquireStudent\n   sql: "+sql+"\n   stdDetails: "+req.app.locals.stdDetails+"\n/---/");
 
-  studentEnrolled(req, res, next, id, role);
+  studentEnrolled(req, res, next, id);
 }
 
 /* 
@@ -316,34 +318,34 @@ function inquireStudent(req, res, next, id, role) {
  * 
  * Set req.app.locals.stdEnrolled to a list of pertinent information about the courses a given student is enrolled in.
  */
-function studentEnrolled(req, res, next, id, role) {
+function studentEnrolled(req, res, next, id) {
   if (req.app.locals.stdDetails != undefined) {
     sql = 'SELECT CourseNo, OffTerm, OffYear, FacFirstName, FacLastName, EnrGrade';
     sql += ' FROM Enrollment natural join Course natural join Offering natural join Faculty';
     sql += ' WHERE StdSSN = '
     sql += id;
     sql += ';';
-    req.app.locals.db.get(sql, [req.body.id], (err, row) => {
+    req.app.locals.db.all(sql, [id], (err, rows) => {
       if (err) {
         throw err;
       }
-      req.app.locals.stdEnrolled = row;
+      req.app.locals.stdEnrolled = rows;
     });
   }
   else {
     req.app.locals.stdEnrolled = undefined;
   }
 
-  console.log("\nstudentEnrolled, sql: "+sql+"\n");
+  console.log("\n/---/\nstudentEnrolled\n   sql: "+sql+"\n   stdEnrolled: "+req.app.locals.stdEnrolled+"\n/---/");
 
-  renderPage(req, res, next, id, role);
+  renderPage(req, res, next, id);
 }
 
 /*
  * Marshal all the data that has been stashed in req.app.locals, and call res.render
  * depending on what role was selected in index.
  */
-function renderPage(req, res, next, id, role) {
+function renderPage(req, res, next, id) {
   console.log('\nrenderPage() called. role: '+JSON.stringify(req.query))
   if (req.body.role === "student") {
     console.log('Rendering Student Page...\n')
