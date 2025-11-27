@@ -8,43 +8,41 @@ html
 
 block content 
 
-    //- What do I need to SELECT?
-    //- FacSSN = id
-    //- FacFirstName = facdetails.
-    //- FacLastName = facdetails.
+    h2 Your Offerings
 
+    if coursesTeaching.length === 0
+      p No enrollment records
+    else
+      table(border="1" cellpadding="6")
+        tr
+          th Course Number
+          th Term
+          th Year
+        each row in coursesTeaching
+          tr
+            td= row.CourseNo
+            td= row.OffTerm
+            td= row.OffYear
+            td
+              form(action="/role" method="POST")
+                input(type="hidden" name="id" value=id)
+                input(type="hidden" name="role" value="teacher")
+                input(type="hidden" name="course_to_grade" value=row.CourseNo)
+                button(type="submit") Grade Students
 
-
-    //- Join: FacSSN <-> OfferNo
-    //- Offering Table
-    //- CourseNo, OffTerm, OffYear
-
-    p Your offerings:
-
-    ///* List of offerings taught by that instructor
-     * Course number
-     * Term
-     * Year
-     */
-  
-     //- Displaying: [OFFERING TABLE] CourseNo, OffTerm, OffYear
-
-
-
-    //- Join: OfferNo
-    //- Enrollment Table
-    //- OfferNo, StdSSN, EnrGrade
-
-    //- Join: StdSSN
-    //- Student Table
-    //- StdSSN, StdFirstName, StdLastName
-
-    p Your students:
-
-    ///* Students in that offering
-     * full name
-     * Student ID
-     * grade
-     */
-
-     //- Displaying: [STUDENT TABLE] StdSSN, StdFirstName, StdLastName [ENROLLMENT TABLE] EnrGrade
+    if stdInfo 
+      h2 Your Students
+      if stdInfo.length === 0
+        p No students enrolled
+      else
+        table(border="1" cellpadding="6")
+          tr
+            th Student
+            th Student ID
+            th Grade
+          each row in stdInfo
+            tr
+              td= row.Student
+              td= row.StdSSN
+              td
+                input(type="text" name="student_grade" value= row.Days placeholder=row.EnrGrade)

@@ -81,7 +81,7 @@ function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this
 
     // student_grade
 
-    if (req.body.action == 'course_drop') {
+    if (req.body.action == 'student_grade') {
       sql = `UPDATE Enrollment SET EnrGrade = '${req.body.EnrGrade}'`;
       update_fields = fields.slice(3,7).concat(['FacSupervisor','FacZipCode']);
       sql += ` WHERE StdSSN = '${req.body.StdSSN}';`;
@@ -315,7 +315,7 @@ function teacherTeaching(req, res, next, id) {
  */
 function findTeacherGrading(req, res, next, id) {
   if (req.app.locals.facDetails != undefined && req.body.course_to_grade) {
-    sql = 'SELECT (StdFirstName || " " || StdLastName) as "Student", StdSSN as "Student ID", EnrGrade as "Grade"';
+    sql = 'SELECT (StdFirstName || " " || StdLastName) as "Student", StdSSN, EnrGrade as "Grade"';
     sql += ' FROM Student natural join Enrollment natural join Offering';
     sql += ' WHERE OfferNo = ?';
     sql += ' and FacSSN = ?;';
