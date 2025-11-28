@@ -26,12 +26,6 @@ html
             td= row.Year
             td= row.Instructor
             td= row.Grade
-            td
-              form(action="/role" method="POST")
-                input(type="hidden" name="action" value="course_drop")
-                input(type="hidden" name="StdSSN" value=id)
-                input(type="hidden" name="OfferNo" value=row.OfferNo)
-                button(type="submit") Drop
 
     // need to add to app.js
     h2 Winter 2025 Offerings
@@ -55,10 +49,17 @@ html
             td= row.Days
             td
               if row.Enrolled == 1
-                span Already Enrolled
+                form(action="/role" method="POST")
+                  input(type="hidden" name="id" value=id)
+                  input(type="hidden" name="role" value="student")
+                  input(type="hidden" name="action" value="course_drop")
+                  input(type="hidden" name="OfferNo_todrop" value=row.OfferNo)
+                  button(type="submit") Drop
               else
                 form(action="/role" method="POST")
+                  input(type="hidden" name="id" value=id)
+                  input(type="hidden" name="role" value="student")
                   input(type="hidden" name="action" value="course_add")
                   input(type="hidden" name="StdSSN" value=id)
-                  input(type="hidden" name="OfferNo" value=row.OfferNo)
+                  input(type="hidden" name="OfferNo_toadd" value=row.OfferNo)
                   button(type="submit") Enroll

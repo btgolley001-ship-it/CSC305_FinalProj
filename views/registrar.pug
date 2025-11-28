@@ -24,44 +24,62 @@ html
             td= row.Location
             td= row.Time
             td= row.Days
+
             //Edit form (inline)
             form(action= `/registrar/${id}/edit_offering?offer_no=${row.OfferNo}` method='post' style="display:inline-block; margin-right:10px;")
               select(name="FacSSN")
                 option(value="") --None--
                 each f in facultyIDs
                   option(value=f.FacSSN selected=(f.FacSSN == row.FacSSN)) #{f.Instructor}
-                input(type="text" name="location" value= row.Location placeholder="Location")
-                input(type="text" name="time" value= row.Time placeholder="Time")
-                input(type="text" name="days" value= row.Days placeholder="Days")
-                label
-                  input(type="checkbox" name="offered" checked=(row.OfferNo ? true : false))
-                  | Offered
-                button(type="submit") Update
+              input(type="text" name="Location_toUpdate" value= row.Location placeholder="Location")
+              input(type="text" name="Time_toUpdate" value= row.Time placeholder="Time")
+              input(type="text" name="Days_toUpdate" value= row.Days placeholder="Days")
+              
+              // vv not entirely sure what this checkbox is supposed to do?
+              label
+                input(type="checkbox" name="offered" checked=(row.OfferNo ? true : false))
+                | Offered
+              // ^^ ?
+              
+              input(type="hidden" name="id" value=id)
+              input(type="hidden" name="role" value="registrar")
+              input(type="hidden" name="action" value="offering_update")
+              button(type="submit") Update
+            
+            // Cancel form (inline)
             form(action=`/registrar/${id}/cancel_offering/${row.OfferNo}` method="post" style="display:inline-block")
+              input(type="hidden" name="id" value=id)
+              input(type="hidden" name="role" value="registrar")
+              input(type="hidden" name="action" value="offering_cancel")
+              input(type="hidden" name="OfferNo_toCancel" value=row.OfferNo)
               button(type="submit" onclick="return confirm('cancel offering?')") Cancel
+
     h2 Add new Winter 2025 Offerings
     form(action=`/registrar/${id}/add_offering` method="post")
       label Course:
-      select(name="CourseNo")
+      select(name="CourseNo_toAdd")
         each row in courses
           option(value=row.CourseNo) #{row.CourseNo} 
       br
       label Offering Number:
-      input(type="text" name="OfferNo" required)
+      input(type="text" name="OfferNo_toAdd" required)
       br
       label Instructor:
-      select(name= "FacSSN")
+      select(name= "FacSSN_toAdd")
         option(value="") --None--
         each f in facultyIDs
           option(value=f.FacSSN) #{f.Instructor}
       br 
       label Location:
-      input(type="text" name="location")
+      input(type="text" name="Location_toAdd")
       br 
       label Time:
-      input(type="text" name="time")
+      input(type="text" name="Time_toAdd")
       br 
       label Days:
-      input(type="text" name="days")
+      input(type="text" name="Days_toAdd")
       br
+      input(type="hidden" name="action" value="offering_add")
+      input(type="hidden" name="id" value=id)
+      input(type="hidden" name="role" value="registrar")
       button(type="submit") Add Offering

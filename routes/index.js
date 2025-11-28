@@ -23,7 +23,7 @@ router.post('/role', function(req, res, next) {
 
 /*
  * If there is a query to run to change the Enrollment table, run it.
- * In any case, run listWinterOfferings next.
+ * In any case, run changeOffering next.
  */
 function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this code!
   console.log(`changeEnrollment: ${req.body.action}`);
@@ -32,30 +32,22 @@ function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this
 
   if (req.body.action && req.body.role === 'student') {
     let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
-    fields = ['OfferNo', 'EnrGrade'];
     
     // course_add
 
     if (req.body.action == 'course_add') {
-      sql = 'INSERT INTO Enrollment(StdSSN,';
-      for (field of fields) {
-        sql += `,${field}`;
-      }
-      sql += `) VALUES ('${id}'`;
-      for (field of fields) {
-        sql += `,'${req.body[field]}'`;
-      }
-      sql += ');';
-      // INSERT INTO Enrollment(StdSSN, OfferNo, EnrGrade) VALUES({id}, {OfferNo}, {EnrGrade});
+      sql = 'INSERT INTO Enrollment(OfferNo, StdSSN) VALUES (';
+      sql += `'${req.body.OfferNo_toadd}', `;
+      sql += `'${id}');`;
+      // INSERT INTO Enrollment(OfferNo, StdSSN) VALUES({OfferNo_toadd}, {id});
     }
     
     // course_drop
     
     else if (req.body.action == 'course_drop') {
-      sql = `DELETE * FROM Enrollment WHERE StdSSN='${id}' and OfferNo=`;
-      sql += `,'${req.body.OfferNo}'`;
-      sql += ';';
-      // DELETE * FROM Enrollment WHERE StdSSN = '{StdSNN}' and OfferNo = '{OfferNo}'
+      sql = `DELETE FROM Enrollment WHERE StdSSN='${id}' and OfferNo=`;
+      sql += `'${req.body.OfferNo_todrop}';`;
+      // DELETE FROM Enrollment WHERE StdSSN = '{StdSNN}' and OfferNo = '{OfferNo_todrop}'
     }
 
     console.log("\nchangeEnrollment, if role = 'student', sql: "+sql+"\n");
@@ -82,14 +74,87 @@ function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this
     // student_grade
 
     if (req.body.action == 'student_grade') {
-      sql = `UPDATE Enrollment SET EnrGrade = '${req.body.EnrGrade}'`;
-      update_fields = fields.slice(3,7).concat(['FacSupervisor','FacZipCode']);
-      sql += ` WHERE StdSSN = '${req.body.StdSSN}';`;
-      sql += ` and OfferNo = '${req.body.OfferNo}';`;
+      sql = `UPDATE Enrollment SET EnrGrade = '${req.body.student_grade}'`;
+      sql += ` WHERE StdSSN = '${req.body.student_ssn}';`;
+      sql += ` and OfferNo = '${req.body.course_to_grade}';`;
       // UPDATE Enrollment SET EnrGrade = {EnrGrade} WHERE StdSSN = {StdSSN} and OfferNo = {OfferNo};
     }
 
     console.log("\nchangeEnrollment, if role = 'teacher', sql: "+sql+"\n");
+
+    // Callback function defined in the old style so that this.changes gets the
+    //     number of rows affected.
+    function sqlCallback(err) {
+      if (err) {
+        throw err;
+      }
+      console.log(`${this.changes} rows affected.`)
+      changeOffering(req, res, next, id);
+    }
+
+    req.app.locals.db.run(sql, [], sqlCallback);
+  }
+
+  else {
+    changeOffering(req, res, next, id);
+  }
+}
+
+/*
+ * If there is a query to run to change the Enrollment table, run it.
+ * In any case, run listWinterOfferings next.
+ */
+function changeOffering(req, res, next, id) {
+  if (req.body.action && req.body.role === 'registrar') {
+    let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
+    console.log(sql);
+
+    // offering_add
+
+    if (req.body.action == 'offering_add') {
+
+      fields = ['OfferNo', 'CourseNo', 'OffTerm', 'OffYear', 'OffLocation', 'OffTime', 'FacSSN', 'OffDays'];
+      fields_to_add = [req.body.OfferNo_toAdd, req.body.CourseNo_toAdd, 'WINTER', '2025', req.body.Location_toAdd, req.body.Time_toAdd, req.body.FacSSN_toAdd, req.body.Days_toAdd];
+
+      sql = 'INSERT INTO Offering(';
+      for (field of fields) {
+        sql += `${field}, `;
+      sql = sql.slice(0, -2) + ') VALUES (';
+      // INSERT INTO Offering(OfferNo, CourseNo, OffTerm, OffYear, OffDays, OffTime, OffLocation, FacSSN)
+      
+      for (field_to_add of fields_to_add) {
+        sql += `'${field_to_add}', `;
+      }
+      sql = sql.slice(0, -2) + ');';
+      // VALUES ({OfferNo_toAdd}, {CourseNo_toAdd}, 'WINTER', 2025, {Days_toAdd}, {Time_toAdd}, {Location_toAdd}, {FacSSN_toAdd});
+      }
+    }
+    
+    // offering_update
+
+    else if (req.body.action == 'offering_update') {
+      
+      sql = `UPDATE Offering SET `;
+      sql += `FacSSN='${req.body.FacSSN}', `;
+      sql += `OffLocation='${req.body.Location_toUpdate}', `;
+      sql += `OffTime='${req.body.Time_toUpdate}', `;
+      sql += `OffDays='${req.body.Days_toUpdate}' `;
+      sql += `WHERE OfferNo='${req.body.OfferNo_toUpdate}';`;
+      // UPDATE Offering SET 
+        // FacSSN={FacSSN}, 
+        // OffLocation={Location_toUpdate}, 
+        // OffTime={Time_toUpdate}, OffDays={Days_toUpdate} 
+      // WHERE OfferNo={OfferNo_toUpdate};
+
+    }
+
+    // offering_cancel
+
+    else if (req.body.action == 'offering_cancel') {
+      sql = `DELETE FROM Offering WHERE OfferNo = '${req.body.OfferNo_toCancel}';`;
+    }
+
+    console.log("\nchangeOffering, if role = 'registrar', sql: "+sql+"\n");
 
     // Callback function defined in the old style so that this.changes gets the
     //     number of rows affected.

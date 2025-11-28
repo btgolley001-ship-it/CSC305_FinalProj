@@ -45,4 +45,10 @@ block content
               td= row.Student
               td= row.StdSSN
               td
-                input(type="text" name="student_grade" value= row.Days placeholder=row.EnrGrade)
+                form(action="/role" method="POST")
+                  input(type="hidden" name="id" value=id)
+                  input(type="hidden" name="role" value="teacher")
+                  input(type="hidden" name="student_ssn" value=row.StdSSN)
+                  input(type="hidden" name="course_to_grade" value=course_to_grade)
+                  input(type="text" name="student_grade" value= row.Days placeholder=row.EnrGrade)
+                  button(type="submit") Submit Grade
