@@ -225,15 +225,16 @@ function listWinterOfferings(req, res, next, id) {
   console.log("\n/---/\nlistWinterOfferings\n   sql: "+sql+"");
 
   req.app.locals.db.all(sql, [], (err, rows) => {
-      if (err) {
-        throw err;
-      }
-      req.app.locals.WinterOfferings = rows;
-      // log output for debugging
-      console.log("   WinterOfferings (from callback): ", rows, "\n/---/");
-      // continue after getting WinterOfferings
-      listStudentIDs(req, res, next, id);
-    });
+    if (err) throw err;
+    req.app.locals.WinterOfferings = rows;
+  
+    if (req.body.role === 'student') {
+      inquireStudent(req, res, next, id);
+    } else {
+      inquireFaculty(req, res, next, id);
+    }
+});
+
 }
 
 /*
@@ -310,7 +311,7 @@ function listCourses(req, res, next, id) {
  * Set req.app.locals.facDetails to all the details about a given faculty member.
  * Run teacherTeaching() next.
  */
-function inquireFaculty(req, res, next, id) {
+Faculty(req, res, next, id) {
   // Check that the given id is in the list of faculty IDs. If not, skip the query.
   const idStr = String(id);
   const facultyIDs = (req.app.locals.facultyIDs || []).map(obj => String(obj.FacSSN));
@@ -419,13 +420,8 @@ function inquireStudent(req, res, next, id) {
     sql = 'SELECT StdSSN, StdFirstName, StdLastName, StdCity, StdState, StdZip, StdMajor, StdClass, StdGPA';
     sql += ' FROM Student WHERE StdSSN = ?;';
     req.app.locals.db.all(sql, [id], (err, row) => {
-      if (err) {
-        throw err;
-      }
+      if (err) throw err;
       req.app.locals.stdDetails = row;
-      // log output for debugging
-      console.log("\n/---/\ninquireStudent (callback)\n   sql: "+sql+"\n   stdDetails: ", row, "\n/---/");
-      // continue after getting stdDetails
       studentEnrolled(req, res, next, id);
     });
   }
@@ -457,9 +453,6 @@ function studentEnrolled(req, res, next, id) {
         throw err;
       }
       req.app.locals.stdEnrolled = rows;
-      // log output for debugging
-      console.log("\n/---/\nstudentEnrolled\n   sql: "+sql+"\n   stdEnrolled: ", rows, "\n/---/");
-      // continue after getting stdEnrolled
       renderPage(req, res, next, id);
     });
   }
