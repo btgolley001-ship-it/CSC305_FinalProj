@@ -8,7 +8,7 @@ html
 
     // need to add to app.js
     h2 Enrollment Records
-    if enrollment.length === 0
+    if !enrollment || enrollment.length === 0
       p No enrollment records
     else
       // table can be adjusted (cant see cause I cant download on my desktop)
