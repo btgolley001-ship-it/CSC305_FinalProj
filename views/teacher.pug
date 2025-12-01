@@ -10,7 +10,7 @@ block content
 
     h2 Your Offerings
 
-    if coursesTeaching.length === 0
+    if !coursesTeaching || coursesTeaching.length === 0
       p No enrollment records
     else
       table(border="1" cellpadding="6")
