@@ -13,99 +13,71 @@ router.get('/', function(req, res, next) {
 router.post('/role', function(req, res, next) {
   console.log('req.body (POST): '+JSON.stringify(req.body));
   
-  var { id, role } = req.body; 
+  var id = req.body.id;
 
   console.log('req.body.id: '+JSON.stringify(req.body.id)
               +'\nid: '+JSON.stringify(id)+'\n')
 
-  changeEnrollment(req, res, next, id);
+  changedb(req, res, next, id);
 });
 
 /*
- * If there is a query to run to change the Enrollment table, run it.
- * In any case, run changeOffering next.
+ * If there is a query to run to change the database, run it.
+ * In any case, run listWinterOfferings next.
  */
-function changeEnrollment(req, res, next, id) { // REMINDER: need to fix up this code!
-  console.log(`changeEnrollment: ${req.body.action}`);
-
-  // student.pug changes
-
-  if (req.body.action && req.body.role === 'student') {
-    let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
+function changedb(req, res, next, id) {
+  
+  // check if there is an action to take
+  if (req.body.action) {
     
-    // course_add
+    let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
+    console.log(sql);
+
+    /*
+     * course_add
+     * from student.pug
+     * 
+     * INSERT INTO Enrollment(OfferNo, StdSSN) VALUES({OfferNo_toadd}, {id});
+     */
 
     if (req.body.action == 'course_add') {
       sql = 'INSERT INTO Enrollment(OfferNo, StdSSN) VALUES (';
       sql += `'${req.body.OfferNo_toadd}', `;
       sql += `'${id}');`;
-      // INSERT INTO Enrollment(OfferNo, StdSSN) VALUES({OfferNo_toadd}, {id});
     }
-    
-    // course_drop
-    
+
+    /*
+     * course_drop
+     * from student.pug
+     * 
+     * DELETE FROM Enrollment WHERE StdSSN = '{StdSNN}' and OfferNo = '{OfferNo_todrop}'
+     */
+
     else if (req.body.action == 'course_drop') {
       sql = `DELETE FROM Enrollment WHERE StdSSN='${id}' and OfferNo=`;
       sql += `'${req.body.OfferNo_todrop}';`;
-      // DELETE FROM Enrollment WHERE StdSSN = '{StdSNN}' and OfferNo = '{OfferNo_todrop}'
     }
 
-    console.log("\nchangeEnrollment, if role = 'student', sql: "+sql+"\n");
-
-    // Callback function defined in the old style so that this.changes gets the
-    //     number of rows affected.
-    function sqlCallback(err) {
-      if (err) throw err;
-      console.log(`${this.changes} rows affected.`)
-      listWinterOfferings(req, res, next, id);
-    }
-
-    req.app.locals.db.run(sql, [], sqlCallback);
-  }
-
-  // teacher.pug changes
-
-  else if (req.body.action && req.body.role === 'teacher') {
-    let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
-    console.log(sql);
-
-    // student_grade
+    /* 
+     * student_grade
+     * from teacher.pug
+     * 
+     * UPDATE Enrollment SET EnrGrade = {EnrGrade} WHERE StdSSN = {StdSSN} and OfferNo = {OfferNo};
+     */
 
     if (req.body.action == 'student_grade') {
       sql = `UPDATE Enrollment SET EnrGrade = '${req.body.student_grade}'`;
       sql += ` WHERE StdSSN = '${req.body.student_ssn}'`;
       sql += ` and OfferNo = '${req.body.course_to_grade}';`;
-      // UPDATE Enrollment SET EnrGrade = {EnrGrade} WHERE StdSSN = {StdSSN} and OfferNo = {OfferNo};
     }
 
-    console.log("\nchangeEnrollment, if role = 'teacher', sql: "+sql+"\n");
-
-    // Callback function defined in the old style so that this.changes gets the
-    //     number of rows affected.
-    function sqlCallback(err) {
-      if (err) throw err;
-      console.log(`${this.changes} rows affected.`)
-      changeOffering(req, res, next, id);
-    }
-
-    req.app.locals.db.run(sql, [req.body.student_grade, req.body.student_ssn, req.body.course_to_grade], sqlCallback);
-  }
-
-  else {
-    changeOffering(req, res, next, id);
-  }
-}
-
-/*
- * If there is a query to run to change the Enrollment table, run it.
- * In any case, run listWinterOfferings next.
- */
-function changeOffering(req, res, next, id) {
-  if (req.body.action && req.body.role === 'registrar') {
-    let sql = 'SELECT 3+2;';  // Do something harmless if sql doesn't get set properly
-    console.log(sql);
-
-    // offering_add
+    /*
+     * offering_add
+     * from registrar.pug
+     * 
+     * INSERT INTO Offering(OfferNo, CourseNo, OffTerm, OffYear, OffDays, OffTime, OffLocation, FacSSN)
+     * VALUES ({OfferNo_toAdd}, {CourseNo_toAdd}, 'WINTER', 2025, {Days_toAdd}, {Time_toAdd}, {Location_toAdd}, {FacSSN_toAdd});
+     */
 
     if (req.body.action == 'offering_add') {
 
@@ -116,41 +88,46 @@ function changeOffering(req, res, next, id) {
       for (field of fields) {
         sql += `${field}, `;
       sql = sql.slice(0, -2) + ') VALUES (';
-      // INSERT INTO Offering(OfferNo, CourseNo, OffTerm, OffYear, OffDays, OffTime, OffLocation, FacSSN)
       
       for (field_to_add of fields_to_add) {
         sql += `'${field_to_add}', `;
       }
       sql = sql.slice(0, -2) + ');';
-      // VALUES ({OfferNo_toAdd}, {CourseNo_toAdd}, 'WINTER', 2025, {Days_toAdd}, {Time_toAdd}, {Location_toAdd}, {FacSSN_toAdd});
       }
     }
-    
-    // offering_update
+
+    /*
+     * offering_update
+     * from registrar.pug
+     * 
+     * DELETE FROM Offering WHERE OfferNo={OfferNo_toCancel};
+     * 
+     * OR
+     * 
+     * UPDATE Offering SET 
+     *   FacSSN={FacSSN}, 
+     *   OffLocation={Location_toUpdate}, 
+     *   OffTime={Time_toUpdate}, OffDays={Days_toUpdate} 
+     * WHERE OfferNo={OfferNo_toUpdate};
+     */
 
     else if (req.body.action == 'offering_update') {
-      
-      sql = `UPDATE Offering SET `;
-      sql += `FacSSN='${req.body.FacSSN}', `;
-      sql += `OffLocation='${req.body.Location_toUpdate}', `;
-      sql += `OffTime='${req.body.Time_toUpdate}', `;
-      sql += `OffDays='${req.body.Days_toUpdate}' `;
-      sql += `WHERE OfferNo='${req.body.OfferNo_toUpdate}';`;
-      // UPDATE Offering SET 
-        // FacSSN={FacSSN}, 
-        // OffLocation={Location_toUpdate}, 
-        // OffTime={Time_toUpdate}, OffDays={Days_toUpdate} 
-      // WHERE OfferNo={OfferNo_toUpdate};
-
+      // if Offered checkbox is not checked, delete the offering
+      //    (treating missing req.body.Offered as 'delete')
+      // else, update the offering with the provided details
+      if (!req.body.Offered) {
+        sql = `DELETE FROM Offering WHERE OfferNo='${req.body.OfferNo_toUpdate}';`;
+      } else {
+        sql = `UPDATE Offering SET `;
+        sql += `FacSSN='${req.body.FacSSN}', `;
+        sql += `OffLocation='${req.body.Location_toUpdate}', `;
+        sql += `OffTime='${req.body.Time_toUpdate}', `;
+        sql += `OffDays='${req.body.Days_toUpdate}' `;
+        sql += `WHERE OfferNo='${req.body.OfferNo_toUpdate}';`;
+      }
     }
 
-    // offering_cancel
-
-    else if (req.body.action == 'offering_cancel') {
-      sql = `DELETE FROM Offering WHERE OfferNo = '${req.body.OfferNo_toCancel}';`;
-    }
-
-    console.log("\nchangeOffering, if role = 'registrar', sql: "+sql+"\n");
+    console.log("\nchangedb, sql: "+sql+"\n");
 
     // Callback function defined in the old style so that this.changes gets the
     //     number of rows affected.
@@ -162,7 +139,8 @@ function changeOffering(req, res, next, id) {
 
     req.app.locals.db.run(sql, [], sqlCallback);
   }
-
+  
+  // no action to take; just continue
   else {
     listWinterOfferings(req, res, next, id);
   }
@@ -185,34 +163,38 @@ function listWinterOfferings(req, res, next, id) {
   
   if (req.body.role == 'student') {
 
-    sql = "SELECT CourseNo, (FacFirstName || ' ' || FacLastName) as 'Instructor',"
+    sql = "SELECT OfferNo, CourseNo, (FacFirstName || ' ' || FacLastName) as 'Instructor',"
     sql += " OffLocation as 'Location',"
     sql += " OffTime as 'Time', OffDays as 'Days'"
-    sql += " FROM Offering natural join Faculty"
+    sql += " FROM Offering"
+    sql += " LEFT OUTER JOIN Faculty ON Offering.FacSSN = Faculty.FacSSN"
     sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
 
     // SELECT CourseNo, 
     //        (FacFirstName || ' ' || FacLastName) as 'Instructor',
     //        OffLocation as 'Location', 
     //        OffTime as 'Time', OffDays as 'Days'
-    // FROM Offering natural join Faculty
+    // FROM Offering
+    // LEFT OUTER JOIN Faculty ON Offering.FacSSN = Faculty.FacSSN
     // WHERE OffTerm = 'WINTER' and OffYear = 2025;
   }
   
   if (req.body.role == 'registrar') {
 
     sql = "SELECT OfferNo, CourseNo,"
-    sql += " FacFirstName, FacLastName,"
+    sql += " (FacFirstName || ' ' || FacLastName) as 'Instructor',"
     sql += " OffLocation as 'Location',"
     sql += " OffTime as 'Time', OffDays as 'Days'"
-    sql += " FROM Offering natural join Faculty"
+    sql += " FROM Offering"
+    sql += " LEFT OUTER JOIN Faculty ON Offering.FacSSN = Faculty.FacSSN"
     sql += " WHERE OffTerm = 'WINTER' and OffYear = 2025;"
 
     // SELECT OfferNo, CourseNo, 
     //        (FacFirstName || " " || FacLastName) as "Instructor",
     //        OffLocation as 'Location', 
     //        OffTime as 'Time', OffDays as 'Days'
-    // FROM Offering natural join Faculty
+    // FROM Offering
+    // LEFT OUTER JOIN Faculty ON Offering.FacSSN = Faculty.FacSSN
     // WHERE OffTerm = 'WINTER' and OffYear = 2025;
   }
 
@@ -292,7 +274,7 @@ function listCourses(req, res, next, id) {
       if (req.body.role === 'student') {
         inquireStudent(req, res, next, id);
       }
-      else if (req.body.role === 'faculty') {
+      else if (req.body.role === 'teacher') {
         inquireFaculty(req, res, next, id);
       }
       else {
@@ -371,21 +353,20 @@ function teacherTeaching(req, res, next, id) {
 /*
  * SELECT (StdFirstName || " " || StdLastName) as "Student",
  *         StdSSN as "Student ID", EnrGrade as "Grade"
- * FROM Student natural join Enrollment natural join Offering
- * WHERE OfferNo = {OfferNo} and FacSSN = {id};
+ * FROM Offering NATURAL JOIN Enrollment NATURAL JOIN Student
+ * WHERE CourseNo = {CourseNo};
  * 
  * Set req.app.locals.teacherGrading to the information needed for the view of the table when editing grades.
  * Run inquireStudent() next.
  */
 function findTeacherGrading(req, res, next, id) {
-  if (req.app.locals.facDetails != undefined && req.body.course_to_grade) {
+  if (req.body.course_to_grade) {
     let sql = 'SELECT 3+2;';  // if sql doesn't get set properly
 
-    sql = 'SELECT (StdFirstName || " " || StdLastName) as "Student", StdSSN, EnrGrade as "Grade"';
-    sql += ' FROM Student natural join Enrollment natural join Offering';
-    sql += ' WHERE OfferNo = ?';
-    sql += ' and FacSSN = ?;';
-    req.app.locals.db.all(sql, [req.body.course_to_grade, id], (err, rows) => { // course_to_grade TBA, from teacher.pug form
+    sql = 'SELECT (StdFirstName || " " || StdLastName) as "Student", Student.StdSSN as StdSSN, EnrGrade as "Grade"';
+    sql += ' FROM Offering NATURAL JOIN Enrollment NATURAL JOIN Student';
+    sql += ' WHERE CourseNo = ?;';
+    req.app.locals.db.all(sql, [req.body.course_to_grade], (err, rows) => { // course_to_grade TBA, from teacher.pug form
       if (err) throw err;
       req.app.locals.teacherGrading = rows;
       // log output for debugging
@@ -436,7 +417,7 @@ function inquireStudent(req, res, next, id) {
 
 /* 
  *
- * SELECT CourseNo as "Course Number", OffTerm as "Term", OffYear as "Year", 
+ * SELECT CourseNo, OffTerm as "Term", OffYear as "Year", 
  * (FacFirstName || " " || FacLastName) as "Instructor",
  * EnrGrade as "Grade"
  * FROM Enrollment natural join Course natural join Offering natural join Faculty 
@@ -448,7 +429,7 @@ function studentEnrolled(req, res, next, id) {
   if (req.app.locals.stdDetails != undefined) {
     let sql = 'SELECT 3+2;';  // if sql doesn't get set properly
     
-    sql = 'SELECT CourseNo as "Course Number", OffTerm as "Term", OffYear as "Year", (FacFirstName || " " || FacLastName) as "Instructor", EnrGrade as "Grade"';
+    sql = 'SELECT CourseNo, OffTerm as "Term", OffYear as "Year", (FacFirstName || " " || FacLastName) as "Instructor", EnrGrade as "Grade"';
     sql += ' FROM Enrollment natural join Course natural join Offering natural join Faculty';
     sql += ' WHERE StdSSN = ?;';
 

@@ -26,7 +26,8 @@ html
             td= row.Days
 
             //Edit form (inline)
-            form(action= `/registrar/${id}/edit_offering?offer_no=${row.OfferNo}` method='post' style="display:inline-block; margin-right:10px;")
+            form(action= "/role" method='post' style="display:inline-block; margin-right:10px;")
+              input(type="hidden" name="OfferNo_toUpdate" value=row.OfferNo)
               select(name="FacSSN")
                 option(value="") --None--
                 each f in facultyIDs
@@ -35,27 +36,18 @@ html
               input(type="text" name="Time_toUpdate" value= row.Time placeholder="Time")
               input(type="text" name="Days_toUpdate" value= row.Days placeholder="Days")
               
-              // vv not entirely sure what this checkbox is supposed to do?
+              // 'Offered' boolean
               label
-                input(type="checkbox" name="offered" checked=(row.OfferNo ? true : false))
+                input(type="checkbox" name="Offered" checked=(row.OfferNo ? true : false))
                 | Offered
-              // ^^ ?
               
               input(type="hidden" name="id" value=id)
               input(type="hidden" name="role" value="registrar")
               input(type="hidden" name="action" value="offering_update")
               button(type="submit") Update
-            
-            // Cancel form (inline)
-            form(action=`/registrar/${id}/cancel_offering/${row.OfferNo}` method="post" style="display:inline-block")
-              input(type="hidden" name="id" value=id)
-              input(type="hidden" name="role" value="registrar")
-              input(type="hidden" name="action" value="offering_cancel")
-              input(type="hidden" name="OfferNo_toCancel" value=row.OfferNo)
-              button(type="submit" onclick="return confirm('cancel offering?')") Cancel
 
     h2 Add new Winter 2025 Offerings
-    form(action=`/registrar/${id}/add_offering` method="post")
+    form(action="/role" method="post")
       label Course:
       select(name="CourseNo_toAdd")
         each row in courses
