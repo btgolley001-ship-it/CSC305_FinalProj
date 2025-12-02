@@ -20,27 +20,26 @@ html
           tr
             td= row.OfferNo
             td= row.CourseNo
-            td= row.Instructor
-            td= row.Location
-            td= row.Time
-            td= row.Days
-
-            //Edit form (inline)
-            form(action= "/role" method='post' style="display:inline-block; margin-right:10px;")
-              input(type="hidden" name="OfferNo_toUpdate" value=row.OfferNo)
-              select(name="FacSSN")
+            // Instructor dropdown initialized to current instructor
+            td
+              select(name="FacSSN" form="form-#{row.OfferNo}")
                 option(value="") --None--
                 each f in facultyIDs
                   option(value=f.FacSSN selected=(f.FacSSN == row.FacSSN)) #{f.Instructor}
-              input(type="text" name="Location_toUpdate" value= row.Location placeholder="Location")
-              input(type="text" name="Time_toUpdate" value= row.Time placeholder="Time")
-              input(type="text" name="Days_toUpdate" value= row.Days placeholder="Days")
-              
-              // 'Offered' boolean
-              label
-                input(type="checkbox" name="Offered" checked=(row.OfferNo ? true : false))
-                | Offered
-              
+            // Location
+            td
+              input(type="text" name="Location_toUpdate" form="form-#{row.OfferNo}" value=row.Location)
+            // Time
+            td
+              input(type="text" name="Time_toUpdate" form="form-#{row.OfferNo}" value=row.Time)
+            // Days
+            td
+              input(type="text" name="Days_toUpdate" form="form-#{row.OfferNo}" value=row.Days)
+
+            // Single form per row, outside table cells
+            form(action="/role" method="post" id="form-#{row.OfferNo}")
+              input(type="hidden" name="OfferNo_toUpdate" value=row.OfferNo)
+              input(type="checkbox" name="Offered" checked=(row.Offered)) Offered
               input(type="hidden" name="id" value=id)
               input(type="hidden" name="role" value="registrar")
               input(type="hidden" name="action" value="offering_update")
