@@ -39,7 +39,8 @@ html
             // Single form per row, outside table cells
             form(action="/role" method="post" id="form-#{row.OfferNo}")
               input(type="hidden" name="OfferNo_toUpdate" value=row.OfferNo)
-              input(type="checkbox" name="Offered" checked=row.Offered) Offered
+              input(type="checkbox" name="Offered" checked) 
+              input Offered
               input(type="hidden" name="id" value=id)
               input(type="hidden" name="role" value="registrar")
               input(type="hidden" name="action" value="offering_update")
