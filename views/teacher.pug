@@ -40,7 +40,7 @@ block content
             th Student
             th Student ID
             th Grade
-          each row in stdInfo
+          each row in teacherGrading
             tr
               td= row.Student
               td= row.StdSSN
@@ -49,6 +49,8 @@ block content
                   input(type="hidden" name="id" value=id)
                   input(type="hidden" name="role" value="teacher")
                   input(type="hidden" name="student_ssn" value=row.StdSSN)
-                  input(type="hidden" name="course_to_grade" value=course_to_grade)
-                  input(type="text" name="student_grade" placeholder=row.Grade)
+                  input(type="hidden" name="offer_no" value=row.OfferNo)
+                  input(type="hidden" name="course_to_grade" value=formdata.course_to_grade)
+                  input(type="hidden" name="action" value="student_grade")
+                  input(type="text" name="student_grade" value=row.Grade)
                   button(type="submit") Submit Grade
