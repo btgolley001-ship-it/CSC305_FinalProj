@@ -65,11 +65,11 @@ function changedb(req, res, next, id) {
      * UPDATE Enrollment SET EnrGrade = {EnrGrade} WHERE StdSSN = {StdSSN} and OfferNo = {OfferNo};
      */
 
-    if (req.body.action == 'student_grade') {
-      sql = `UPDATE Enrollment SET EnrGrade = '${req.body.student_grade}'`;
-      sql += ` WHERE StdSSN = '${req.body.student_ssn}'`;
-      sql += ` and OfferNo = '${req.body.course_to_grade}';`;
+    else if (req.body.action == "student_grade") {
+      sql = `UPDATE Enrollment SET EnrGrade = '${req.body.student_grade}' where StdSSN = '${req.body.student_ssn}'`;
+      sql += ` and OfferNo = '${req.body.offer_no}';`;
     }
+
 
     /*
      * offering_add
@@ -363,9 +363,16 @@ function findTeacherGrading(req, res, next, id) {
   if (req.body.course_to_grade) {
     let sql = 'SELECT 3+2;';  // if sql doesn't get set properly
 
-    sql = 'SELECT (StdFirstName || " " || StdLastName) as "Student", Student.StdSSN as StdSSN, EnrGrade as "Grade"';
-    sql += ' FROM Offering NATURAL JOIN Enrollment NATURAL JOIN Student';
-    sql += ' WHERE CourseNo = ?;';
+    sql = 'SELECT (StdFirstName || " " || StdLastName) AS Student, ';
+    sql += 'Student.StdSSN AS StdSSN, ';
+    sql += 'EnrGrade AS Grade, ';
+    sql += 'Enrollment.OfferNo AS OfferNo ';
+    sql += 'FROM Offering ';
+    sql += 'JOIN Enrollment ON Offering.OfferNo = Enrollment.OfferNo ';
+    sql += 'JOIN Student ON Student.StdSSN = Enrollment.StdSSN ';
+    sql += 'WHERE Offering.CourseNo = ?;';
+
+    
     req.app.locals.db.all(sql, [req.body.course_to_grade], (err, rows) => { // course_to_grade TBA, from teacher.pug form
       if (err) throw err;
       req.app.locals.teacherGrading = rows;
