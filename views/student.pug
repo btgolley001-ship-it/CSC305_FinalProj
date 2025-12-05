@@ -48,7 +48,11 @@ html
             td= row.Time
             td= row.Days
             td
-              if row.Enrolled == 1
+              - var enrolled = false
+              for enr in enrollment
+                if row.OfferNo == enr.OfferNo
+                  - enrolled = true
+              if enrolled
                 form(action="/role" method="POST")
                   input(type="hidden" name="id" value=id)
                   input(type="hidden" name="role" value="student")

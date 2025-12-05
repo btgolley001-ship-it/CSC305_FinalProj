@@ -224,7 +224,7 @@ function listStudentIDs(req, res, next, id) {
       if (err) throw err;
       req.app.locals.studentIDs = rows;
       // log output for debugging
-      console.log("\n/---/\nlistStudentIDs\n   studentIDs (from callback): ", rows, "\n/---/");
+      //console.log("\n/---/\nlistStudentIDs\n   studentIDs (from callback): ", rows, "\n/---/");
       // continue after getting studentIDs
       listFacultyIDs(req, res, next, id);
     });
@@ -244,7 +244,7 @@ function listFacultyIDs(req, res, next, id) {
       if (err) throw err;
       req.app.locals.facultyIDs = rows;
       // log output for debugging
-      console.log("\n/---/\nlistFacultyIDs\n   facultyIDs (from callback): ", rows, "\n/---/");
+      //console.log("\n/---/\nlistFacultyIDs\n   facultyIDs (from callback): ", rows, "\n/---/");
       // continue after getting facultyIDs
       listCourses(req, res, next, id);
     });
@@ -264,7 +264,7 @@ function listCourses(req, res, next, id) {
       if (err) throw err;
       req.app.locals.courses = rows;
       // log output for debugging
-      console.log("\n/---/\nlistCourses\n   courses (from callback): ", rows, "\n/---/");
+      //console.log("\n/---/\nlistCourses\n   courses (from callback): ", rows, "\n/---/");
       // continue after getting courses
 
       // Depending on role, inquire about faculty or student next (role-based inquiries)
@@ -424,7 +424,7 @@ function inquireStudent(req, res, next, id) {
 
 /* 
  *
- * SELECT CourseNo, OffTerm as "Term", OffYear as "Year", 
+ * SELECT OfferNo, CourseNo, OffTerm as "Term", OffYear as "Year", 
  * (FacFirstName || " " || FacLastName) as "Instructor",
  * EnrGrade as "Grade"
  * FROM Enrollment natural join Course natural join Offering natural join Faculty 
@@ -436,7 +436,7 @@ function studentEnrolled(req, res, next, id) {
   if (req.app.locals.stdDetails != undefined) {
     let sql = 'SELECT 3+2;';  // if sql doesn't get set properly
     
-    sql = 'SELECT CourseNo, OffTerm as "Term", OffYear as "Year", (FacFirstName || " " || FacLastName) as "Instructor", EnrGrade as "Grade"';
+    sql = 'SELECT OfferNo, CourseNo, OffTerm as "Term", OffYear as "Year", (FacFirstName || " " || FacLastName) as "Instructor", EnrGrade as "Grade"';
     sql += ' FROM Enrollment natural join Course natural join Offering natural join Faculty';
     sql += ' WHERE StdSSN = ?;';
 
