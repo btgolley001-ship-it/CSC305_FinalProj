@@ -20,31 +20,33 @@ html
           tr
             td= row.OfferNo
             td= row.CourseNo
-            // Instructor dropdown initialized to current instructor
-            td
-              select(name="FacSSN" form="form-#{row.OfferNo}")
-                option(value="") --None--
-                each f in facultyIDs
-                  option(value=f.FacSSN selected=(f.FacSSN == row.FacSSN)) #{f.Instructor}
-            // Location
-            td
-              input(type="text" name="Location_toUpdate" form="form-#{row.OfferNo}" value=row.Location)
-            // Time
-            td
-              input(type="text" name="Time_toUpdate" form="form-#{row.OfferNo}" value=row.Time)
-            // Days
-            td
-              input(type="text" name="Days_toUpdate" form="form-#{row.OfferNo}" value=row.Days)
-
-            // Single form per row, outside table cells
             form(action="/role" method="post" id="form-#{row.OfferNo}")
-              input(type="hidden" name="OfferNo_toUpdate" value=row.OfferNo)
-              input(type="checkbox" name="Offered" checked) 
-              input Offered
-              input(type="hidden" name="id" value=id)
-              input(type="hidden" name="role" value="registrar")
-              input(type="hidden" name="action" value="offering_update")
-              button(type="submit") Update
+              // Instructor dropdown initialized to current instructor
+              td
+                select(name="FacSSN")
+                  option(value="" selected=(row.FacSSN == null || row.FacSSN == '')) --None--
+                  each f in facultyIDs
+                    option(value=f.FacSSN selected=(f.FacSSN == row.FacSSN)) #{f.Instructor}
+              // Location
+              td
+                input(type="text" name="Location_toUpdate" value=row.Location)
+              // Time
+              td
+                input(type="text" name="Time_toUpdate" value=row.Time)
+              // Days
+              td
+                input(type="text" name="Days_toUpdate" value=row.Days)
+
+              td 
+                input(type="checkbox" name="Offered" checked)
+                label Offered
+
+              td
+                input(type="hidden" name="OfferNo_toUpdate" value=row.OfferNo)
+                input(type="hidden" name="id" value=id)
+                input(type="hidden" name="role" value="registrar")
+                input(type="hidden" name="action" value="offering_update")
+                button(type="submit") Update
 
     h2 Add new Winter 2025 Offerings
     form(action="/role" method="post")

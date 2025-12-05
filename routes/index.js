@@ -80,21 +80,19 @@ function changedb(req, res, next, id) {
      */
 
     if (req.body.action == 'offering_add') {
-
-      fields = ['OfferNo', 'CourseNo', 'OffTerm', 'OffYear', 'OffLocation', 'OffTime', 'FacSSN', 'OffDays'];
-      fields_to_add = [req.body.OfferNo_toAdd, req.body.CourseNo_toAdd, 'WINTER', '2025', req.body.Location_toAdd, req.body.Time_toAdd, req.body.FacSSN_toAdd, req.body.Days_toAdd];
-
-      sql = 'INSERT INTO Offering(';
-      for (field of fields) {
-        sql += `${field}, `;
-      sql = sql.slice(0, -2) + ') VALUES (';
       
-      for (field_to_add of fields_to_add) {
-        sql += `'${field_to_add}', `;
+      sql = 'INSERT INTO Offering(OfferNo, CourseNo, OffTerm, OffYear, OffDays, OffTime, OffLocation, FacSSN'
+      sql += ') VALUES (';
+      sql += `'${req.body.OfferNo_toAdd}', `;
+      sql += `'${req.body.CourseNo_toAdd}', `;
+      sql += `'WINTER', `;
+      sql += `'2025', `;
+      sql += `'${req.body.Days_toAdd}', `;
+      sql += `'${req.body.Time_toAdd}', `;
+      sql += `'${req.body.Location_toAdd}', `;
+      sql += `'${req.body.FacSSN_toAdd}'`;
+      sql += ');';
       }
-      sql = sql.slice(0, -2) + ');';
-      }
-    }
 
     /*
      * offering_update
@@ -182,6 +180,7 @@ function listWinterOfferings(req, res, next, id) {
   if (req.body.role == 'registrar') {
 
     sql = "SELECT OfferNo, CourseNo,"
+    sql += " Offering.FacSSN as FacSSN,"
     sql += " (FacFirstName || ' ' || FacLastName) as 'Instructor',"
     sql += " OffLocation as 'Location',"
     sql += " OffTime as 'Time', OffDays as 'Days'"
